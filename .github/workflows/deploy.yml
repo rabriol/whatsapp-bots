@@ -28,7 +28,7 @@ jobs:
             GOOGLE_SHEETS_ID=${{ secrets.GOOGLE_SHEETS_ID }}
             GOOGLE_API_KEY=${{ secrets.GOOGLE_API_KEY }}
             SHEET_NAME=${{ secrets.ANNOUNCEMENT_SHEET_NAME }}
-            WHATSAPP_GROUP_ID=${{ secrets.WHATSAPP_GROUP_ID }}
+            WHATSAPP_GROUP_JID=${{ secrets.ANNOUNCEMENT_BOT_GROUP_JID }}
             GATEWAY_URL=http://whatsapp-gateway:3000
             EOF
 
@@ -37,7 +37,7 @@ jobs:
             GOOGLE_SHEETS_ID=${{ secrets.GOOGLE_SHEETS_ID }}
             GOOGLE_API_KEY=${{ secrets.GOOGLE_API_KEY }}
             SHEET_NAME=${{ secrets.BIRTHDAY_SHEET_NAME }}
-            WHATSAPP_GROUP_JID=${{ secrets.WHATSAPP_GROUP_JID }}
+            WHATSAPP_GROUP_JID=${{ secrets.BIRTHDAY_BOT_GROUP_JID }}
             GATEWAY_URL=http://whatsapp-gateway:3000
             EOF
 

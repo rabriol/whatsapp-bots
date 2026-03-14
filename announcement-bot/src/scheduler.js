@@ -20,9 +20,9 @@ function parseTime(time) {
 async function setupSchedules() {
   clearSchedules();
 
-  const groupId = process.env.WHATSAPP_GROUP_ID;
+  const groupId = process.env.WHATSAPP_GROUP_JID;
   if (!groupId) {
-    throw new Error('WHATSAPP_GROUP_ID must be set in .env');
+    throw new Error('WHATSAPP_GROUP_JID must be set in .env');
   }
 
   let announcements;
