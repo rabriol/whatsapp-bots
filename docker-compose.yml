@@ -1,0 +1,41 @@
+services:
+  whatsapp-gateway:
+    build: ./gateway
+    container_name: whatsapp-gateway
+    volumes:
+      - ./gateway/auth:/app/auth
+    networks:
+      - whatsapp-net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  announcement-bot:
+    build: ./announcement-bot
+    container_name: announcement-bot
+    env_file: ./announcement-bot/.env
+    depends_on:
+      whatsapp-gateway:
+        condition: service_healthy
+    networks:
+      - whatsapp-net
+    restart: unless-stopped
+
+  birthday-bot:
+    build: ./birthday-bot
+    container_name: birthday-bot
+    env_file: ./birthday-bot/.env
+    depends_on:
+      whatsapp-gateway:
+        condition: service_started
+    networks:
+      - whatsapp-net
+    restart: unless-stopped
+
+networks:
+  whatsapp-net:
+    driver: bridge
