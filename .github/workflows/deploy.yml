@@ -1,0 +1,45 @@
+name: Deploy to VPS
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          script: |
+            set -e
+            cd /opt/whatsapp-bots
+
+            # Pull latest code
+            git pull origin main
+
+            # Write announcement-bot .env
+            cat > announcement-bot/.env <<EOF
+            GOOGLE_SHEETS_ID=${{ secrets.GOOGLE_SHEETS_ID }}
+            GOOGLE_API_KEY=${{ secrets.GOOGLE_API_KEY }}
+            WHATSAPP_GROUP_ID=${{ secrets.WHATSAPP_GROUP_ID }}
+            GATEWAY_URL=http://whatsapp-gateway:3000
+            EOF
+
+            # Write birthday-bot .env
+            cat > birthday-bot/.env <<EOF
+            GOOGLE_SHEETS_ID=${{ secrets.GOOGLE_SHEETS_ID }}
+            GOOGLE_API_KEY=${{ secrets.GOOGLE_API_KEY }}
+            WHATSAPP_GROUP_JID=${{ secrets.WHATSAPP_GROUP_JID }}
+            SHEET_NAME=${{ secrets.SHEET_NAME }}
+            GATEWAY_URL=http://whatsapp-gateway:3000
+            EOF
+
+            # Rebuild and restart (gateway keeps auth session between deploys)
+            docker compose build
+            docker compose up -d
