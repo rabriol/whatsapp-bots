@@ -1,0 +1,14 @@
+{
+  "name": "announcement-bot",
+  "version": "1.0.0",
+  "description": "WhatsApp bot for church announcements via Google Sheets",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js"
+  },
+  "dependencies": {
+    "axios": "^1.7.9",
+    "dotenv": "^16.4.7",
+    "node-cron": "^3.0.3"
+  }
+}
