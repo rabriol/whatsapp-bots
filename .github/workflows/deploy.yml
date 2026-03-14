@@ -18,10 +18,15 @@ jobs:
           key: ${{ secrets.VPS_SSH_KEY }}
           script: |
             set -e
-            cd /opt/whatsapp-bots
 
-            # Pull latest code
-            git pull origin main
+            # Clone on first deploy, pull on subsequent deploys
+            if [ -d /opt/whatsapp-bots ]; then
+              cd /opt/whatsapp-bots
+              git pull origin main
+            else
+              git clone https://github.com/rabriol/whatsapp-bots.git /opt/whatsapp-bots
+              cd /opt/whatsapp-bots
+            fi
 
             # Write announcement-bot .env
             cat > announcement-bot/.env <<EOF
