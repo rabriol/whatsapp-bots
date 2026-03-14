@@ -27,6 +27,7 @@ jobs:
             cat > announcement-bot/.env <<EOF
             GOOGLE_SHEETS_ID=${{ secrets.GOOGLE_SHEETS_ID }}
             GOOGLE_API_KEY=${{ secrets.GOOGLE_API_KEY }}
+            SHEET_NAME=${{ secrets.ANNOUNCEMENT_SHEET_NAME }}
             WHATSAPP_GROUP_ID=${{ secrets.WHATSAPP_GROUP_ID }}
             GATEWAY_URL=http://whatsapp-gateway:3000
             EOF
@@ -35,8 +36,8 @@ jobs:
             cat > birthday-bot/.env <<EOF
             GOOGLE_SHEETS_ID=${{ secrets.GOOGLE_SHEETS_ID }}
             GOOGLE_API_KEY=${{ secrets.GOOGLE_API_KEY }}
+            SHEET_NAME=${{ secrets.BIRTHDAY_SHEET_NAME }}
             WHATSAPP_GROUP_JID=${{ secrets.WHATSAPP_GROUP_JID }}
-            SHEET_NAME=${{ secrets.SHEET_NAME }}
             GATEWAY_URL=http://whatsapp-gateway:3000
             EOF
 

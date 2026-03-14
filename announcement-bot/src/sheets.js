@@ -8,13 +8,14 @@ const COLUMNS = ['id', 'type', 'title', 'day', 'time', 'goal', 'collected', 'due
  * @returns {Promise<Object[]>} Array of announcement objects
  */
 async function fetchAnnouncements() {
-  const { GOOGLE_SHEETS_ID, GOOGLE_API_KEY } = process.env;
+  const { GOOGLE_SHEETS_ID, GOOGLE_API_KEY, SHEET_NAME } = process.env;
 
   if (!GOOGLE_SHEETS_ID || !GOOGLE_API_KEY) {
     throw new Error('GOOGLE_SHEETS_ID and GOOGLE_API_KEY must be set in .env');
   }
 
-  const url = `https://sheets.googleapis.com/v4/spreadsheets/${GOOGLE_SHEETS_ID}/values/Announcements!A2:K?key=${GOOGLE_API_KEY}`;
+  const sheet = encodeURIComponent(SHEET_NAME || 'Announcements');
+  const url = `https://sheets.googleapis.com/v4/spreadsheets/${GOOGLE_SHEETS_ID}/values/${sheet}!A2:K?key=${GOOGLE_API_KEY}`;
 
   const response = await axios.get(url);
   const rows = response.data.values || [];
