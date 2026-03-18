@@ -2,6 +2,7 @@ services:
   whatsapp-gateway:
     build: ./gateway
     container_name: whatsapp-gateway
+    env_file: ./gateway/.env
     volumes:
       - ./gateway/auth:/app/auth
     networks:

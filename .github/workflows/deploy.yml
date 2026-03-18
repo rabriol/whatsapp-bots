@@ -28,6 +28,11 @@ jobs:
               cd /opt/whatsapp-bots
             fi
 
+            # Write gateway .env
+            cat > gateway/.env <<EOF
+            NOTIFICATION_JID=${{ secrets.NOTIFICATION_JID }}
+            EOF
+
             # Write announcement-bot .env
             cat > announcement-bot/.env <<EOF
             GOOGLE_SHEETS_ID=${{ secrets.GOOGLE_SHEETS_ID }}

@@ -49,6 +49,13 @@ async function connect() {
       console.log('WhatsApp connection established.');
       sock = socket;
       connectionStatus = 'connected';
+
+      if (process.env.NOTIFICATION_JID) {
+        const now = new Date().toLocaleString('pt-BR', { timeZone: 'America/Los_Angeles' });
+        socket.sendMessage(process.env.NOTIFICATION_JID, {
+          text: `✅ WhatsApp Gateway conectado em ${now}`,
+        }).catch((err) => console.error('Failed to send startup notification:', err.message));
+      }
     }
 
     if (connection === 'close') {
