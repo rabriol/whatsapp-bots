@@ -103,7 +103,7 @@ function buildEventEntries(rows) {
     if (!title || !start_date) continue;
 
     // Skip non-confirmed events (if status column exists)
-    if (status !== undefined && status !== '' && status.toLowerCase() !== 'confirmed') continue;
+    if (status !== undefined && status !== '' && status.trim().toLowerCase() !== 'confirmed') continue;
 
     const startDt = parseDate(start_date);
     if (!startDt) continue;
