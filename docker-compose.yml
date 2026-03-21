@@ -37,6 +37,17 @@ services:
       - whatsapp-net
     restart: unless-stopped
 
+  weekly-announcement-bot:
+    build: ./weekly-announcement-bot
+    container_name: weekly-announcement-bot
+    env_file: ./weekly-announcement-bot/.env
+    depends_on:
+      whatsapp-gateway:
+        condition: service_healthy
+    networks:
+      - whatsapp-net
+    restart: unless-stopped
+
 networks:
   whatsapp-net:
     driver: bridge
