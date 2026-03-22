@@ -34,11 +34,11 @@ function today() {
 }
 
 /**
- * Returns a Date set to local midnight 2 months from today.
+ * Returns a Date set to local midnight N days from today.
  */
-function twoMonthsFromToday() {
+function daysFromToday(n) {
   const d = today();
-  return new Date(d.getFullYear(), d.getMonth() + 2, d.getDate());
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate() + n);
 }
 
 /**
@@ -93,17 +93,20 @@ function extractByday(rruleStr) {
  */
 function buildEventEntries(rows) {
   const windowStart = today();
-  const windowEnd   = twoMonthsFromToday();
+  const windowEnd   = daysFromToday(45);
   const entries = [];
 
   for (const row of rows) {
-    const { title, start_date, end_date, recurrence_rule, status } = row;
+    const { title, start_date, end_date, recurrence_rule, status, exclude_weekly } = row;
 
     // Skip events without title or start_date
     if (!title || !start_date) continue;
 
     // Skip non-confirmed events (if status column exists)
     if (status !== undefined && status !== '' && status.trim().toLowerCase() !== 'confirmed') continue;
+
+    // Skip events excluded from weekly announcement
+    if (exclude_weekly && exclude_weekly.trim().toLowerCase() === 'yes') continue;
 
     const startDt = parseDate(start_date);
     if (!startDt) continue;
@@ -119,7 +122,8 @@ function buildEventEntries(rows) {
       if (startDt <= windowEnd && endDt >= windowStart) {
         entries.push({
           sortKey: startDt,
-          label: `${formatDateRange(startDt, endDt)} ${title}`,
+          dateLabel: formatDateRange(startDt, endDt),
+          title,
         });
       }
     }
@@ -163,7 +167,8 @@ function processRecurringEvent(row, startDt, byday, windowStart, windowEnd, entr
     const sortDate = new Date(occ.getUTCFullYear(), occ.getUTCMonth(), occ.getUTCDate());
     entries.push({
       sortKey: sortDate,
-      label: `${monthLabel} (${dayLabel}) ${title}`,
+      dateLabel: `${monthLabel} (${dayLabel})`,
+      title,
     });
   }
 }
@@ -177,7 +182,7 @@ function processRecurringEvent(row, startDt, byday, windowStart, windowEnd, entr
 function formatMessage(entries) {
   const lines = ['📅 *Upcoming Events*', ''];
   for (const entry of entries) {
-    lines.push(entry.label);
+    lines.push(`*${entry.dateLabel}* ${entry.title}`);
   }
   return lines.join('\n');
 }
