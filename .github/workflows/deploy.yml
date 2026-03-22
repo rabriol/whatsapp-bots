@@ -51,6 +51,13 @@ jobs:
             GATEWAY_URL=http://whatsapp-gateway:3000
             EOF
 
+            # Write weekly-announcement-bot .env
+            cat > weekly-announcement-bot/.env <<EOF
+            SHEET_ID=1_gwn-4tW7H4-2VBT5qM0xJAKG-ZIkvy_dEIHt9CnO6w
+            GATEWAY_URL=http://whatsapp-gateway:3000
+            WHATSAPP_GROUP_JID=${{ secrets.WEEKLY_BOT_GROUP_JID }}
+            EOF
+
             # Rebuild and restart (gateway keeps auth session between deploys)
             docker compose build
             docker compose up -d
