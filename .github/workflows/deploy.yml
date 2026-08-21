@@ -58,6 +58,11 @@ jobs:
             WHATSAPP_GROUP_JID=${{ secrets.WEEKLY_BOT_GROUP_JID }}
             EOF
 
+            # Write root .env (compose-level variables, e.g. the Cloudflare tunnel)
+            cat > .env <<EOF
+            CLOUDFLARE_TUNNEL_TOKEN=${{ secrets.CLOUDFLARE_TUNNEL_TOKEN }}
+            EOF
+
             # Rebuild and restart (gateway keeps auth session between deploys)
             docker compose build
             docker compose up -d
