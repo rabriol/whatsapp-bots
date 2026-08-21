@@ -1,7 +1,10 @@
 const axios = require('axios');
 
-// Matches columns A–K in the "Announcements" sheet tab
-const COLUMNS = ['id', 'type', 'title', 'day', 'time', 'goal', 'collected', 'due_date', 'link', 'text', 'active'];
+// Matches columns A–N in the "Announcements" sheet tab
+const COLUMNS = [
+  'id', 'type', 'title', 'day', 'time', 'goal', 'collected', 'due_date',
+  'link', 'text', 'active', 'freq', 'byday', 'date_once',
+];
 
 /**
  * Fetches announcements from the public Google Sheets spreadsheet.
@@ -15,7 +18,7 @@ async function fetchAnnouncements() {
   }
 
   const sheet = encodeURIComponent(SHEET_NAME || 'Announcements');
-  const url = `https://sheets.googleapis.com/v4/spreadsheets/${GOOGLE_SHEETS_ID}/values/${sheet}!A2:K?key=${GOOGLE_API_KEY}`;
+  const url = `https://sheets.googleapis.com/v4/spreadsheets/${GOOGLE_SHEETS_ID}/values/${sheet}!A2:N?key=${GOOGLE_API_KEY}`;
 
   const response = await axios.get(url);
   const rows = response.data.values || [];
