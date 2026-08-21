@@ -1,23 +1,15 @@
-import { config } from "./config";
-import { getTodaysBirthdays } from "./sheets";
-import { sendBirthdayMessage } from "./whatsapp";
+import { setupSchedule, startPeriodicSync } from "./scheduler";
 
 async function main() {
-  console.log("Checking for today's birthdays...");
+  console.log("Starting Church Birthday Bot...");
 
-  const names = await getTodaysBirthdays();
+  await setupSchedule();
+  startPeriodicSync();
 
-  if (names.length === 0) {
-    console.log("No birthdays today.");
-    return;
-  }
-
-  console.log(`Found ${names.length} birthday(s): ${names.join(", ")}`);
-
-  await sendBirthdayMessage(config.whatsappGroupJid, names);
+  console.log("Bot is running. Press Ctrl+C to stop.");
 }
 
 main().catch((err) => {
-  console.error("Error:", err.message);
+  console.error("Fatal error:", err.message);
   process.exit(1);
 });

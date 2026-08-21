@@ -6,6 +6,43 @@ interface Birthday {
   name: string;
 }
 
+export interface Schedule {
+  hour: number;
+  minute: number;
+  tz: string;
+}
+
+const SCHEDULE_DEFAULTS: Schedule = { hour: 7, minute: 0, tz: "America/Los_Angeles" };
+
+export async function getSchedule(): Promise<Schedule> {
+  const { googleSheetsId, googleApiKey, settingsSheetName } = config;
+  const range = encodeURIComponent(settingsSheetName);
+  const url = `https://sheets.googleapis.com/v4/spreadsheets/${googleSheetsId}/values/${range}?key=${googleApiKey}`;
+
+  const response = await fetch(url);
+  if (!response.ok) {
+    console.warn(`Could not read ${settingsSheetName} sheet (${response.status}), using default schedule.`);
+    return SCHEDULE_DEFAULTS;
+  }
+
+  const data = (await response.json()) as { values?: string[][] };
+  const rows = data.values || [];
+  const byKey: Record<string, string> = {};
+  for (const row of rows.slice(1)) {
+    if (row[0]) byKey[row[0].trim()] = (row[1] || "").trim();
+  }
+
+  const hour = parseInt(byKey["birthday_schedule_hour"], 10);
+  const minute = parseInt(byKey["birthday_schedule_minute"], 10);
+  const tz = byKey["birthday_schedule_tz"];
+
+  return {
+    hour: Number.isFinite(hour) ? hour : SCHEDULE_DEFAULTS.hour,
+    minute: Number.isFinite(minute) ? minute : SCHEDULE_DEFAULTS.minute,
+    tz: tz || SCHEDULE_DEFAULTS.tz,
+  };
+}
+
 export async function getTodaysBirthdays(): Promise<string[]> {
   const birthdays = await fetchBirthdays();
   const today = new Date();
