@@ -48,6 +48,16 @@ services:
       - whatsapp-net
     restart: unless-stopped
 
+  admin-api:
+    build: ./admin-api
+    container_name: admin-api
+    env_file: ./admin-api/.env
+    volumes:
+      - ./admin-api/service-account.json:/app/service-account.json:ro
+    networks:
+      - whatsapp-net
+    restart: unless-stopped
+
   cloudflared:
     image: cloudflare/cloudflared:latest
     container_name: cloudflared
