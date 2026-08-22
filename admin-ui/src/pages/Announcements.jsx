@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { api } from '../api';
+import { formatMessage } from '../messagePreview';
 import {
   PlusIcon, PencilIcon, TrashIcon, CloseIcon,
   SimpleIcon, EventIcon, DonationIcon, RentIcon,
@@ -221,117 +222,129 @@ export default function Announcements() {
               <button className="icon-btn" onClick={() => setModalOpen(false)}><CloseIcon /></button>
             </div>
 
-            <div className="field">
-              <label>Tipo</label>
-              <div className="type-row">
-                {TYPE_DEFS.map(({ key, label, Icon }) => (
-                  <button
-                    key={key}
-                    className={`type-chip ${draft.type === key ? 'active' : ''}`}
-                    onClick={() => setDraft((d) => ({ ...d, type: key }))}
-                  >
-                    <Icon /> {label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div className="field">
-              <label>Título</label>
-              <input type="text" value={draft.title} onChange={(e) => setDraft((d) => ({ ...d, title: e.target.value }))} />
-            </div>
-
-            <div className="field">
-              <label>Repetição</label>
-              <div className="freq-row">
-                {[['none', 'Não repete'], ['daily', 'Diariamente'], ['weekly', 'Semanalmente'], ['monthly', 'Mensalmente']].map(([key, label]) => (
-                  <button
-                    key={key}
-                    className={`freq-chip ${draft.freq === key ? 'active' : ''}`}
-                    onClick={() => setDraft((d) => ({ ...d, freq: key }))}
-                  >
-                    {label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {draft.freq === 'weekly' && (
-              <div className="field">
-                <label>Dias da semana</label>
-                <div className="day-row">
-                  {DAY_DEFS.map((d) => (
-                    <button
-                      key={d.code}
-                      className={`day-chip ${draft.byDay.includes(d.code) ? 'active' : ''}`}
-                      onClick={() => toggleDraftDay(d.code)}
-                    >
-                      {d.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {draft.freq === 'monthly' && (
-              <div className="field">
-                <label>Dia do mês</label>
-                <input
-                  type="number" min="1" max="31" value={draft.day}
-                  onChange={(e) => setDraft((d) => ({ ...d, day: parseInt(e.target.value, 10) || 1 }))}
-                />
-              </div>
-            )}
-
-            {draft.freq === 'none' && (
-              <div className="field">
-                <label>Data</label>
-                <input
-                  type="date" value={draft.dateOnce}
-                  onChange={(e) => setDraft((d) => ({ ...d, dateOnce: e.target.value }))}
-                />
-              </div>
-            )}
-
-            <div className="field">
-              <label>Hora</label>
-              <input type="time" value={draft.time} onChange={(e) => setDraft((d) => ({ ...d, time: e.target.value }))} />
-            </div>
-
-            <div>
-              <div className="rrule-preview-label">Regra técnica (RRULE)</div>
-              <div className="rrule-preview">{buildRRule(draft.freq, draft.byDay, draft.day, draft.dateOnce)}</div>
-            </div>
-
-            {showMoneyFields ? (
-              <>
-                <div className="field-row">
-                  <div className="field">
-                    <label>Meta ($)</label>
-                    <input type="number" min="0" value={draft.goal} onChange={(e) => setDraft((d) => ({ ...d, goal: parseFloat(e.target.value) || 0 }))} />
-                  </div>
-                  <div className="field">
-                    <label>Arrecadado ($)</label>
-                    <input type="number" min="0" value={draft.collected} onChange={(e) => setDraft((d) => ({ ...d, collected: parseFloat(e.target.value) || 0 }))} />
+            <div className="modal-grid">
+              <div className="modal-form-col">
+                <div className="field">
+                  <label>Tipo</label>
+                  <div className="type-row">
+                    {TYPE_DEFS.map(({ key, label, Icon }) => (
+                      <button
+                        key={key}
+                        className={`type-chip ${draft.type === key ? 'active' : ''}`}
+                        onClick={() => setDraft((d) => ({ ...d, type: key }))}
+                      >
+                        <Icon /> {label}
+                      </button>
+                    ))}
                   </div>
                 </div>
-                <div className="field-row">
-                  <div className="field">
-                    <label>Vencimento (MM/DD)</label>
-                    <input type="text" placeholder="07/31" value={draft.dueDate} onChange={(e) => setDraft((d) => ({ ...d, dueDate: e.target.value }))} />
-                  </div>
-                  <div className="field">
-                    <label>Link de contribuição</label>
-                    <input type="text" placeholder="https://..." value={draft.link} onChange={(e) => setDraft((d) => ({ ...d, link: e.target.value }))} />
+
+                <div className="field">
+                  <label>Título</label>
+                  <input type="text" value={draft.title} onChange={(e) => setDraft((d) => ({ ...d, title: e.target.value }))} />
+                </div>
+
+                <div className="field">
+                  <label>Repetição</label>
+                  <div className="freq-row">
+                    {[['none', 'Não repete'], ['daily', 'Diariamente'], ['weekly', 'Semanalmente'], ['monthly', 'Mensalmente']].map(([key, label]) => (
+                      <button
+                        key={key}
+                        className={`freq-chip ${draft.freq === key ? 'active' : ''}`}
+                        onClick={() => setDraft((d) => ({ ...d, freq: key }))}
+                      >
+                        {label}
+                      </button>
+                    ))}
                   </div>
                 </div>
-              </>
-            ) : (
-              <div className="field">
-                <label>Mensagem</label>
-                <textarea value={draft.text} onChange={(e) => setDraft((d) => ({ ...d, text: e.target.value }))} />
+
+                {draft.freq === 'weekly' && (
+                  <div className="field">
+                    <label>Dias da semana</label>
+                    <div className="day-row">
+                      {DAY_DEFS.map((d) => (
+                        <button
+                          key={d.code}
+                          className={`day-chip ${draft.byDay.includes(d.code) ? 'active' : ''}`}
+                          onClick={() => toggleDraftDay(d.code)}
+                        >
+                          {d.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {draft.freq === 'monthly' && (
+                  <div className="field">
+                    <label>Dia do mês</label>
+                    <input
+                      type="number" min="1" max="31" value={draft.day}
+                      onChange={(e) => setDraft((d) => ({ ...d, day: parseInt(e.target.value, 10) || 1 }))}
+                    />
+                  </div>
+                )}
+
+                {draft.freq === 'none' && (
+                  <div className="field">
+                    <label>Data</label>
+                    <input
+                      type="date" value={draft.dateOnce}
+                      onChange={(e) => setDraft((d) => ({ ...d, dateOnce: e.target.value }))}
+                    />
+                  </div>
+                )}
+
+                <div className="field">
+                  <label>Hora</label>
+                  <input type="time" value={draft.time} onChange={(e) => setDraft((d) => ({ ...d, time: e.target.value }))} />
+                </div>
+
+                <div>
+                  <div className="rrule-preview-label">Regra técnica (RRULE)</div>
+                  <div className="rrule-preview">{buildRRule(draft.freq, draft.byDay, draft.day, draft.dateOnce)}</div>
+                </div>
+
+                {showMoneyFields ? (
+                  <>
+                    <div className="field-row">
+                      <div className="field">
+                        <label>Meta ($)</label>
+                        <input type="number" min="0" value={draft.goal} onChange={(e) => setDraft((d) => ({ ...d, goal: parseFloat(e.target.value) || 0 }))} />
+                      </div>
+                      <div className="field">
+                        <label>Arrecadado ($)</label>
+                        <input type="number" min="0" value={draft.collected} onChange={(e) => setDraft((d) => ({ ...d, collected: parseFloat(e.target.value) || 0 }))} />
+                      </div>
+                    </div>
+                    <div className="field-row">
+                      <div className="field">
+                        <label>Vencimento (MM/DD)</label>
+                        <input type="text" placeholder="07/31" value={draft.dueDate} onChange={(e) => setDraft((d) => ({ ...d, dueDate: e.target.value }))} />
+                      </div>
+                      <div className="field">
+                        <label>Link de contribuição</label>
+                        <input type="text" placeholder="https://..." value={draft.link} onChange={(e) => setDraft((d) => ({ ...d, link: e.target.value }))} />
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  <div className="field">
+                    <label>Mensagem</label>
+                    <textarea value={draft.text} onChange={(e) => setDraft((d) => ({ ...d, text: e.target.value }))} />
+                  </div>
+                )}
               </div>
-            )}
+
+              <div className="preview-panel">
+                <div className="preview-panel-label">Pré-visualização da mensagem</div>
+                <div className="preview-panel-sub">Como o bot vai enviar pro grupo do WhatsApp</div>
+                <div className="bubble">
+                  <div className="bubble-text">{formatMessage(draft)}</div>
+                </div>
+              </div>
+            </div>
 
             <div className="modal-actions">
               <button className="btn-ghost" onClick={() => setModalOpen(false)}>Cancelar</button>

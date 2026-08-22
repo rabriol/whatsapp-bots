@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import Birthdays from './pages/Birthdays';
 import Announcements from './pages/Announcements';
+import { ThemeToggle } from './ThemeToggle';
+import { LogoutIcon } from './icons';
 
 export default function App() {
   const [tab, setTab] = useState('birthdays');
@@ -22,7 +24,13 @@ export default function App() {
             Anúncios
           </button>
         </div>
-        <span className="env-tag">whatsapp-bots · VPS</span>
+        <div className="topbar-right">
+          <span className="env-tag">whatsapp-bots · VPS</span>
+          <ThemeToggle />
+          <a className="icon-btn" href="/cdn-cgi/access/logout" title="Sair">
+            <LogoutIcon />
+          </a>
+        </div>
       </div>
 
       {tab === 'birthdays' ? <Birthdays /> : <Announcements />}
