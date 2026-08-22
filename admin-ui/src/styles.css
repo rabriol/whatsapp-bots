@@ -269,6 +269,39 @@ td.muted {
   color: var(--ink-500);
 }
 
+.event-row {
+  cursor: pointer;
+}
+.event-row:hover td {
+  background: var(--ink-850);
+}
+.event-detail-row td {
+  background: var(--ink-850);
+  padding: 16px;
+  white-space: normal;
+}
+.event-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-width: 640px;
+}
+.event-detail-item {
+  display: flex;
+  gap: 10px;
+  font-size: 13px;
+  line-height: 1.5;
+}
+.event-detail-item .k {
+  color: var(--ink-500);
+  min-width: 100px;
+  flex-shrink: 0;
+}
+.event-detail-item .v {
+  color: var(--ink-100);
+  word-break: break-word;
+}
+
 .pill {
   display: inline-block;
   font-size: 11px;

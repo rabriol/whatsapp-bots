@@ -4,10 +4,40 @@ const express = require('express');
 const { RRule } = require('rrule');
 const config = require('../config');
 const { readSheet, appendRow, updateRow } = require('../sheetsClient');
-const { createEventsModule } = require('../../../shared/events');
+const { createEventsModule, parseDate } = require('../../../shared/events');
 
 const router = express.Router();
 const { buildEventEntries, formatMessage } = createEventsModule(RRule);
+
+// Only the fields a human cares about - the sheet has ~20 more columns of
+// events-sync bookkeeping (checksum, sync_action, event_id, last_synced_at,
+// program_sheet_id, ...) that aren't useful here.
+function toEventDetail(row) {
+  return {
+    rowId: row.row_id || '',
+    title: row.title || '',
+    description: row.description || '',
+    location: row.location || '',
+    startDate: row.start_date || '',
+    startTime: row.start_time || '',
+    endDate: row.end_date || '',
+    endTime: row.end_time || '',
+    allDay: String(row.all_day).toUpperCase() === 'TRUE',
+    timezone: row.timezone || '',
+    recurrenceRule: row.recurrence_rule || '',
+    status: row.status || '',
+    excludeWeekly: String(row.exclude_weekly).trim().toLowerCase() === 'yes',
+    registrationUrl: row.registration_url || '',
+    registrationButtonText: row.registration_button_text || '',
+    registrationDeadline: row.registration_deadline || '',
+    zoomUrl: row.zoom_url || '',
+    youtubeUrl: row.youtube_url || '',
+    isLive: String(row.is_live).toUpperCase() === 'TRUE',
+    attendees: row.attendees || '',
+    reminders: row.reminders || '',
+    visibility: row.visibility || '',
+  };
+}
 
 const WINDOW_KEY = 'event_window_days';
 const WINDOW_HEADERS = ['key', 'value'];
@@ -42,6 +72,32 @@ router.get('/preview', async (req, res, next) => {
       entries: entries.map((e) => ({ dateLabel: e.dateLabel, title: e.title })),
       message,
     });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.get('/all', async (req, res, next) => {
+  try {
+    if (!config.eventsSheetsId) {
+      return res.status(500).json({ error: 'EVENTS_SHEETS_ID is not configured' });
+    }
+
+    const { rows } = await readSheet(config.eventsSheetName, config.eventsSheetsId);
+    const events = rows
+      .map((r) => r.values)
+      .filter((row) => row.title)
+      .map(toEventDetail)
+      .sort((a, b) => {
+        const da = parseDate(a.startDate);
+        const db = parseDate(b.startDate);
+        if (!da && !db) return 0;
+        if (!da) return 1;
+        if (!db) return -1;
+        return da - db;
+      });
+
+    res.json({ events });
   } catch (err) {
     next(err);
   }
