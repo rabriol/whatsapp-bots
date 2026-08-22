@@ -2,6 +2,10 @@
 
 const axios = require('axios');
 
+// gid of the "Settings" tab in the events spreadsheet (confirmed via
+// spreadsheets.get: gid=0 is "Events", gid=1434227925 is "Settings").
+const SETTINGS_GID = 1434227925;
+
 /**
  * Fetches and parses rows from the public Google Sheets calendar.
  * Uses CSV export — no API key required (sheet must be publicly readable).
@@ -15,6 +19,26 @@ async function fetchSheetRows() {
   const url = `https://docs.google.com/spreadsheets/d/${sheetId}/export?format=csv&gid=0`;
   const response = await axios.get(url, { timeout: 15000 });
   return parseCSV(response.data);
+}
+
+/**
+ * Fetches the "Settings" tab (key/value rows) from the same spreadsheet.
+ *
+ * @returns {Promise<Record<string,string>>}
+ */
+async function fetchSettings() {
+  const sheetId = process.env.SHEET_ID;
+  if (!sheetId) throw new Error('SHEET_ID must be set in .env');
+
+  const url = `https://docs.google.com/spreadsheets/d/${sheetId}/export?format=csv&gid=${SETTINGS_GID}`;
+  const response = await axios.get(url, { timeout: 15000 });
+  const rows = parseCSV(response.data);
+
+  const settings = {};
+  for (const row of rows) {
+    if (row.key) settings[row.key.trim()] = (row.value || '').trim();
+  }
+  return settings;
 }
 
 /**
@@ -71,4 +95,4 @@ function parseCSVRow(line) {
   return cells;
 }
 
-module.exports = { fetchSheetRows, parseCSV, parseCSVRow };
+module.exports = { fetchSheetRows, fetchSettings, parseCSV, parseCSVRow };

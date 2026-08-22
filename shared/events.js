@@ -91,15 +91,16 @@ function extractByday(rruleStr) {
 
 function createEventsModule(RRule) {
   /**
-   * Filters and formats sheet rows into event entries for the window [today, today+45].
+   * Filters and formats sheet rows into event entries for the window [today, today+windowDays].
    * Returns an array of { sortKey: Date, dateLabel: string, title: string } objects, sorted by sortKey.
    *
    * @param {Object[]} rows - Raw rows from sheets.js
+   * @param {number} [windowDays=45] - how many days ahead to include
    * @returns {{ sortKey: Date, dateLabel: string, title: string }[]}
    */
-  function buildEventEntries(rows) {
+  function buildEventEntries(rows, windowDays = 45) {
     const windowStart = today();
-    const windowEnd   = daysFromToday(45);
+    const windowEnd   = daysFromToday(windowDays);
     const entries = [];
 
     for (const row of rows) {

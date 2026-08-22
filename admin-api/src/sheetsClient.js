@@ -53,12 +53,13 @@ async function readSheet(sheetName, spreadsheetId) {
  * @param {string} sheetName
  * @param {string[]} headers
  * @param {Record<string,string|number>} rowValues
+ * @param {string} [spreadsheetId] - defaults to the main announcements/birthdays spreadsheet
  */
-async function appendRow(sheetName, headers, rowValues) {
+async function appendRow(sheetName, headers, rowValues, spreadsheetId) {
   const sheets = await getSheets();
   const row = headers.map((h) => (rowValues[h] !== undefined ? rowValues[h] : ''));
   await sheets.spreadsheets.values.append({
-    spreadsheetId: config.googleSheetsId,
+    spreadsheetId: spreadsheetId || config.googleSheetsId,
     range: sheetName,
     valueInputOption: 'RAW',
     requestBody: { values: [row] },
@@ -71,13 +72,14 @@ async function appendRow(sheetName, headers, rowValues) {
  * @param {number} rowNumber
  * @param {string[]} headers
  * @param {Record<string,string|number>} rowValues
+ * @param {string} [spreadsheetId] - defaults to the main announcements/birthdays spreadsheet
  */
-async function updateRow(sheetName, rowNumber, headers, rowValues) {
+async function updateRow(sheetName, rowNumber, headers, rowValues, spreadsheetId) {
   const sheets = await getSheets();
   const row = headers.map((h) => (rowValues[h] !== undefined ? rowValues[h] : ''));
   const lastCol = columnLetter(headers.length);
   await sheets.spreadsheets.values.update({
-    spreadsheetId: config.googleSheetsId,
+    spreadsheetId: spreadsheetId || config.googleSheetsId,
     range: `${sheetName}!A${rowNumber}:${lastCol}${rowNumber}`,
     valueInputOption: 'RAW',
     requestBody: { values: [row] },

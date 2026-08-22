@@ -20,5 +20,9 @@ module.exports = {
   // the same one church-calendar and weekly-announcement-bot read from.
   eventsSheetsId: process.env.EVENTS_SHEETS_ID || '',
   eventsSheetName: process.env.EVENTS_SHEET_NAME || 'Events',
+  // The events spreadsheet's own Settings tab - already exists (used by
+  // events-sync for default_calendar_id etc.), distinct from the main
+  // spreadsheet's Settings tab that the birthday schedule uses.
+  eventsSettingsSheetName: process.env.EVENTS_SETTINGS_SHEET_NAME || 'Settings',
   credentialsPath: process.env.GOOGLE_APPLICATION_CREDENTIALS || './service-account.json',
 };

@@ -2,11 +2,23 @@
 
 const cron = require('node-cron');
 const { RRule } = require('rrule');
-const { fetchSheetRows } = require('./sheets');
+const { fetchSheetRows, fetchSettings } = require('./sheets');
 const { createEventsModule } = require('../../shared/events');
 const { sendMessage } = require('./sender');
 
 const { buildEventEntries, formatMessage } = createEventsModule(RRule);
+const DEFAULT_WINDOW_DAYS = 45;
+
+async function getWindowDays() {
+  try {
+    const settings = await fetchSettings();
+    const n = parseInt(settings.event_window_days, 10);
+    if (Number.isFinite(n) && n >= 1 && n <= 180) return n;
+  } catch (err) {
+    console.error('[weekly-bot] Failed to read event_window_days, using default:', err.message);
+  }
+  return DEFAULT_WINDOW_DAYS;
+}
 
 /**
  * Runs the weekly announcement job:
@@ -29,7 +41,10 @@ async function runJob() {
     return;
   }
 
-  const entries = buildEventEntries(rows);
+  const windowDays = await getWindowDays();
+  console.log(`[weekly-bot] Using ${windowDays}-day window`);
+
+  const entries = buildEventEntries(rows, windowDays);
   if (entries.length === 0) {
     console.log('[weekly-bot] No upcoming events found, skipping send.');
     return;

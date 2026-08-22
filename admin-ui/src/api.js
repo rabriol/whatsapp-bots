@@ -26,4 +26,6 @@ export const api = {
   updateBirthdaySchedule: (data) => request('/birthday-schedule', { method: 'PUT', body: JSON.stringify(data) }),
 
   getEventsPreview: () => request('/events/preview'),
+  getEventsWindow: () => request('/events/window'),
+  updateEventsWindow: (windowDays) => request('/events/window', { method: 'PUT', body: JSON.stringify({ windowDays }) }),
 };
