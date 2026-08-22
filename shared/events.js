@@ -187,7 +187,7 @@ function createEventsModule(RRule) {
    * @returns {string}
    */
   function formatMessage(entries) {
-    const lines = ['📅 *Upcoming Events*', ''];
+    const lines = ['📅 *Próximos Eventos*', ''];
     for (const entry of entries) {
       lines.push(`*${entry.dateLabel}* ${entry.title}`);
     }
