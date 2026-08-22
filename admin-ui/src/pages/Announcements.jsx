@@ -148,6 +148,7 @@ export default function Announcements() {
       {error && <div className="error-banner">{error}</div>}
 
       <div className="card card-flush">
+        <div className="table-scroll">
         <table>
           <thead>
             <tr>
@@ -211,6 +212,7 @@ export default function Announcements() {
             })}
           </tbody>
         </table>
+        </div>
         {announcements.length === 0 && <div className="empty-state">Nenhum anúncio cadastrado.</div>}
       </div>
 

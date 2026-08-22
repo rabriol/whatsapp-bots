@@ -184,6 +184,7 @@ export default function Birthdays() {
           </div>
         </div>
 
+        <div className="table-scroll">
         <table>
           <thead>
             <tr>
@@ -221,6 +222,7 @@ export default function Birthdays() {
             ))}
           </tbody>
         </table>
+        </div>
 
         {filtered.length === 0 && <div className="empty-state">Nenhum aniversariante encontrado.</div>}
       </div>
