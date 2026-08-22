@@ -5,9 +5,9 @@ import { config } from "./config";
 
 let activeTask: ScheduledTask | null = null;
 
-async function runCheck(): Promise<void> {
+async function runCheck(tz: string): Promise<void> {
   console.log("Checking for today's birthdays...");
-  const names = await getTodaysBirthdays();
+  const names = await getTodaysBirthdays(tz);
 
   if (names.length === 0) {
     console.log("No birthdays today.");
@@ -33,7 +33,7 @@ export async function setupSchedule(): Promise<void> {
   }
 
   activeTask = cron.schedule(cronExpr, () => {
-    runCheck().catch((err) => console.error("Error checking birthdays:", err.message));
+    runCheck(tz).catch((err) => console.error("Error checking birthdays:", err.message));
   }, { timezone: tz });
 
   console.log(`Birthday check scheduled daily at ${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")} (${tz})`);

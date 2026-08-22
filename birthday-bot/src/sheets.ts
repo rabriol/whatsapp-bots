@@ -43,11 +43,21 @@ export async function getSchedule(): Promise<Schedule> {
   };
 }
 
-export async function getTodaysBirthdays(): Promise<string[]> {
+// The container runs in UTC; "today" must be today in the church's own
+// timezone, not the server's, or this drifts by a day near midnight UTC.
+function getTodayInTz(tz: string): { day: number; month: number } {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: tz,
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(new Date());
+  const map = Object.fromEntries(parts.map((p) => [p.type, p.value]));
+  return { month: parseInt(map.month, 10), day: parseInt(map.day, 10) };
+}
+
+export async function getTodaysBirthdays(tz: string): Promise<string[]> {
   const birthdays = await fetchBirthdays();
-  const today = new Date();
-  const day = today.getDate();
-  const month = today.getMonth() + 1;
+  const { day, month } = getTodayInTz(tz);
 
   return birthdays
     .filter((b) => b.day === day && b.month === month)

@@ -17,14 +17,27 @@ function toResponseShape(row) {
   };
 }
 
-function daysUntilNext(day, month) {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const year = today.getFullYear();
+// The server (VPS) runs in UTC, but "today" for birthday purposes means
+// today in the church's own timezone - using the server's local Date
+// directly caused an off-by-one whenever UTC had already rolled to the
+// next calendar day while it was still "yesterday" in Los Angeles.
+const CHURCH_TZ = 'America/Los_Angeles';
 
-  let next = new Date(year, month - 1, day);
+function getTodayInTz(tz) {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit',
+  }).formatToParts(new Date());
+  const map = Object.fromEntries(parts.map((p) => [p.type, p.value]));
+  return { year: parseInt(map.year, 10), month: parseInt(map.month, 10), day: parseInt(map.day, 10) };
+}
+
+function daysUntilNext(day, month) {
+  const { year, month: curMonth, day: curDay } = getTodayInTz(CHURCH_TZ);
+  const today = new Date(Date.UTC(year, curMonth - 1, curDay));
+
+  let next = new Date(Date.UTC(year, month - 1, day));
   if (next < today) {
-    next = new Date(year + 1, month - 1, day);
+    next = new Date(Date.UTC(year + 1, month - 1, day));
   }
   return Math.round((next - today) / (1000 * 60 * 60 * 24));
 }
