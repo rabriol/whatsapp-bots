@@ -18,6 +18,9 @@ export const api = {
   deleteAnnouncement: (id) => request(`/announcements/${id}`, { method: 'DELETE' }),
 
   getBirthdays: () => request('/birthdays'),
+  createBirthday: (data) => request('/birthdays', { method: 'POST', body: JSON.stringify(data) }),
+  updateBirthday: (rowNumber, data) => request(`/birthdays/${rowNumber}`, { method: 'PUT', body: JSON.stringify(data) }),
+  deleteBirthday: (rowNumber) => request(`/birthdays/${rowNumber}`, { method: 'DELETE' }),
 
   getBirthdaySchedule: () => request('/birthday-schedule'),
   updateBirthdaySchedule: (data) => request('/birthday-schedule', { method: 'PUT', body: JSON.stringify(data) }),

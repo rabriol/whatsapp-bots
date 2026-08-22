@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { api } from '../api';
-import { ClockIcon, SearchIcon, CheckIcon } from '../icons';
+import { ClockIcon, SearchIcon, CheckIcon, PlusIcon, PencilIcon, TrashIcon, CloseIcon } from '../icons';
 
 const TZ_LABELS = {
   'America/Los_Angeles': 'Los Angeles (PT)',
@@ -12,10 +12,16 @@ const TZ_LABELS = {
 const MONTH_NAMES = [
   'jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez',
 ];
+const MONTH_FULL_NAMES = [
+  'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+  'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro',
+];
 
 function fmtTime(hour, minute) {
   return `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
 }
+
+const EMPTY_DRAFT = { rowNumber: null, name: '', day: 1, month: 1 };
 
 export default function Birthdays() {
   const [birthdays, setBirthdays] = useState([]);
@@ -29,7 +35,12 @@ export default function Birthdays() {
   const [savedFlash, setSavedFlash] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
-  useEffect(() => {
+  const [modalOpen, setModalOpen] = useState(false);
+  const [draft, setDraft] = useState(EMPTY_DRAFT);
+  const [confirmDeleteRow, setConfirmDeleteRow] = useState(null);
+
+  function load() {
+    setLoading(true);
     Promise.all([api.getBirthdays(), api.getBirthdaySchedule()])
       .then(([b, s]) => {
         setBirthdays(b);
@@ -37,7 +48,9 @@ export default function Birthdays() {
       })
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
-  }, []);
+  }
+
+  useEffect(load, []);
 
   function startEdit() {
     setDraftTime(fmtTime(schedule.hour, schedule.minute));
@@ -58,6 +71,40 @@ export default function Birthdays() {
     }
   }
 
+  function openCreate() {
+    setDraft(EMPTY_DRAFT);
+    setModalOpen(true);
+  }
+
+  function openEdit(b) {
+    setDraft({ rowNumber: b.rowNumber, name: b.name, day: b.day, month: b.month });
+    setModalOpen(true);
+  }
+
+  async function saveDraft() {
+    try {
+      if (draft.rowNumber != null) {
+        await api.updateBirthday(draft.rowNumber, { name: draft.name, day: draft.day, month: draft.month });
+      } else {
+        await api.createBirthday({ name: draft.name, day: draft.day, month: draft.month });
+      }
+      setModalOpen(false);
+      load();
+    } catch (err) {
+      setError(err.message);
+    }
+  }
+
+  async function confirmDelete(rowNumber) {
+    try {
+      await api.deleteBirthday(rowNumber);
+      setBirthdays((rows) => rows.filter((r) => r.rowNumber !== rowNumber));
+      setConfirmDeleteRow(null);
+    } catch (err) {
+      setError(err.message);
+    }
+  }
+
   const filtered = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
     return birthdays.filter((b) => !q || b.name.toLowerCase().includes(q));
@@ -72,6 +119,9 @@ export default function Birthdays() {
           <h1>Aniversariantes</h1>
           <p className="subtitle">Quem vai ser comunicado no grupo do WhatsApp, e quando.</p>
         </div>
+        <button className="btn-primary" onClick={openCreate}>
+          <PlusIcon /> Adicionar aniversariante
+        </button>
       </div>
 
       {error && <div className="error-banner">{error}</div>}
@@ -140,6 +190,7 @@ export default function Birthdays() {
               <th>Nome</th>
               <th>Data</th>
               <th>Faltam</th>
+              <th></th>
             </tr>
           </thead>
           <tbody>
@@ -152,6 +203,20 @@ export default function Birthdays() {
                     {b.daysUntil === 0 ? 'Hoje' : b.daysUntil === 1 ? 'Amanhã' : `Em ${b.daysUntil} dias`}
                   </span>
                 </td>
+                <td>
+                  {confirmDeleteRow === b.rowNumber ? (
+                    <div className="confirm-row">
+                      Remover?
+                      <button className="btn-ghost" onClick={() => setConfirmDeleteRow(null)}>Cancelar</button>
+                      <button className="btn-danger" onClick={() => confirmDelete(b.rowNumber)}>Remover</button>
+                    </div>
+                  ) : (
+                    <div className="row-actions">
+                      <button className="icon-btn" onClick={() => openEdit(b)} title="Editar"><PencilIcon /></button>
+                      <button className="icon-btn" onClick={() => setConfirmDeleteRow(b.rowNumber)} title="Remover"><TrashIcon /></button>
+                    </div>
+                  )}
+                </td>
               </tr>
             ))}
           </tbody>
@@ -159,6 +224,45 @@ export default function Birthdays() {
 
         {filtered.length === 0 && <div className="empty-state">Nenhum aniversariante encontrado.</div>}
       </div>
+
+      {modalOpen && (
+        <div className="modal-overlay" onClick={() => setModalOpen(false)}>
+          <div className="modal" style={{ maxWidth: 420 }} onClick={(e) => e.stopPropagation()}>
+            <div className="modal-head">
+              <h3>{draft.rowNumber != null ? 'Editar aniversariante' : 'Adicionar aniversariante'}</h3>
+              <button className="icon-btn" onClick={() => setModalOpen(false)}><CloseIcon /></button>
+            </div>
+
+            <div className="field">
+              <label>Nome</label>
+              <input type="text" value={draft.name} onChange={(e) => setDraft((d) => ({ ...d, name: e.target.value }))} />
+            </div>
+
+            <div className="field-row">
+              <div className="field">
+                <label>Dia</label>
+                <input
+                  type="number" min="1" max="31" value={draft.day}
+                  onChange={(e) => setDraft((d) => ({ ...d, day: parseInt(e.target.value, 10) || 1 }))}
+                />
+              </div>
+              <div className="field">
+                <label>Mês</label>
+                <select value={draft.month} onChange={(e) => setDraft((d) => ({ ...d, month: parseInt(e.target.value, 10) }))}>
+                  {MONTH_FULL_NAMES.map((name, i) => (
+                    <option key={name} value={i + 1}>{name}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div className="modal-actions">
+              <button className="btn-ghost" onClick={() => setModalOpen(false)}>Cancelar</button>
+              <button className="btn-primary" onClick={saveDraft} disabled={!draft.name.trim()}>Salvar</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

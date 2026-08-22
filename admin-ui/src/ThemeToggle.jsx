@@ -18,7 +18,7 @@ function MoonIcon() {
 }
 
 export function ThemeToggle() {
-  const [theme, setTheme] = useState(() => document.documentElement.getAttribute('data-theme') || 'dark');
+  const [theme, setTheme] = useState(() => document.documentElement.getAttribute('data-theme') || 'light');
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
