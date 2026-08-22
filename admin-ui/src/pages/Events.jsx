@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { api } from '../api';
 import { ClockIcon } from '../icons';
+import { WhatsAppText } from '../WhatsAppText';
 
 export default function Events() {
   const [preview, setPreview] = useState(null);
@@ -50,7 +51,7 @@ export default function Events() {
           <div className="preview-panel-label">Pré-visualização da mensagem</div>
           <div className="preview-panel-sub">{preview?.entries.length} evento(s) nessa janela</div>
           <div className="bubble">
-            <div className="bubble-text">{preview?.message}</div>
+            <div className="bubble-text"><WhatsAppText text={preview?.message} /></div>
           </div>
         </div>
       )}

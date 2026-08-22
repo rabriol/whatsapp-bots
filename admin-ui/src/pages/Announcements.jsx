@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { api } from '../api';
 import { formatMessage } from '../messagePreview';
+import { WhatsAppText } from '../WhatsAppText';
 import {
   PlusIcon, PencilIcon, TrashIcon, CloseIcon,
   SimpleIcon, EventIcon, DonationIcon, RentIcon,
@@ -343,7 +344,7 @@ export default function Announcements() {
                 <div className="preview-panel-label">Pré-visualização da mensagem</div>
                 <div className="preview-panel-sub">Como o bot vai enviar pro grupo do WhatsApp</div>
                 <div className="bubble">
-                  <div className="bubble-text">{formatMessage(draft)}</div>
+                  <div className="bubble-text"><WhatsAppText text={formatMessage(draft)} /></div>
                 </div>
               </div>
             </div>
