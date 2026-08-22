@@ -659,8 +659,6 @@ td.muted {
 }
 
 .preview-panel {
-  position: sticky;
-  top: 0;
   background: var(--ink-850);
   border: 1px solid var(--ink-800);
   border-radius: 12px;
@@ -668,6 +666,14 @@ td.muted {
   display: flex;
   flex-direction: column;
   gap: 10px;
+}
+/* Sticky only makes sense inside the modal's scrolling grid (stays
+   visible while the form scrolls) - as a standalone page card (e.g.
+   the Events tab) it sticks to the viewport and overlaps content
+   below it instead. */
+.modal-grid .preview-panel {
+  position: sticky;
+  top: 0;
 }
 .preview-panel-label {
   font-size: 12px;
