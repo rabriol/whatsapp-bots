@@ -1,0 +1,24 @@
+async function request(path, options = {}) {
+  const res = await fetch(`/api${path}`, {
+    headers: { 'Content-Type': 'application/json' },
+    ...options,
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.error || `Request failed: ${res.status}`);
+  }
+  if (res.status === 204) return null;
+  return res.json();
+}
+
+export const api = {
+  getAnnouncements: () => request('/announcements'),
+  createAnnouncement: (data) => request('/announcements', { method: 'POST', body: JSON.stringify(data) }),
+  updateAnnouncement: (id, data) => request(`/announcements/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  deleteAnnouncement: (id) => request(`/announcements/${id}`, { method: 'DELETE' }),
+
+  getBirthdays: () => request('/birthdays'),
+
+  getBirthdaySchedule: () => request('/birthday-schedule'),
+  updateBirthdaySchedule: (data) => request('/birthday-schedule', { method: 'PUT', body: JSON.stringify(data) }),
+};

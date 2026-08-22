@@ -49,7 +49,9 @@ services:
     restart: unless-stopped
 
   admin-api:
-    build: ./admin-api
+    build:
+      context: .
+      dockerfile: admin-api/Dockerfile
     container_name: admin-api
     env_file: ./admin-api/.env
     volumes:
