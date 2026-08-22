@@ -40,6 +40,53 @@ function toEventDetail(row, rowNumber) {
   };
 }
 
+// Fields admin-ui lets a human create/edit. Deliberately excludes the
+// events-sync bookkeeping columns (sync_action, event_id, checksum,
+// last_synced_at, last_error, program_sheet_id, color_id) and the
+// registration_*/exclude_weekly/attendees/reminders/visibility columns,
+// which either don't exist in this sheet or use Calendar-API-specific
+// formats no form here validates.
+const EDITABLE_FIELD_MAP = {
+  title: 'title',
+  description: 'description',
+  location: 'location',
+  startDate: 'start_date',
+  startTime: 'start_time',
+  endDate: 'end_date',
+  endTime: 'end_time',
+  allDay: 'all_day',
+  recurrenceRule: 'recurrence_rule',
+  status: 'status',
+  zoomUrl: 'zoom_url',
+  youtubeUrl: 'youtube_url',
+  isLive: 'is_live',
+};
+
+function fromEditableFields(body) {
+  const values = {};
+  for (const [apiKey, sheetKey] of Object.entries(EDITABLE_FIELD_MAP)) {
+    if (body[apiKey] === undefined) continue;
+    if (apiKey === 'allDay' || apiKey === 'isLive') {
+      values[sheetKey] = body[apiKey] ? 'TRUE' : 'FALSE';
+    } else {
+      values[sheetKey] = String(body[apiKey] ?? '').trim();
+    }
+  }
+  return values;
+}
+
+// row_id (e.g. "E-0032") is this sheet's own stable ID, distinct from the
+// events-sync-assigned Calendar event_id. New rows get the next one in
+// sequence, matching the scheme already used throughout the sheet.
+function nextRowId(rows) {
+  let max = 0;
+  for (const r of rows) {
+    const m = /^E-(\d+)$/.exec((r.values.row_id || '').trim());
+    if (m) max = Math.max(max, parseInt(m[1], 10));
+  }
+  return `E-${String(max + 1).padStart(4, '0')}`;
+}
+
 const WINDOW_KEY = 'event_window_days';
 const WINDOW_HEADERS = ['key', 'value'];
 const DEFAULT_WINDOW_DAYS = 45;
@@ -173,6 +220,78 @@ router.put('/window', async (req, res, next) => {
     }
 
     res.json({ windowDays });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// Registered after the literal /preview, /all, /window routes above -
+// Express matches path params positionally, so a generic single-segment
+// route like this one would otherwise shadow PUT /window (":rowNumber"
+// would greedily match the literal string "window").
+router.post('/', async (req, res, next) => {
+  try {
+    if (!config.eventsSheetsId) {
+      return res.status(500).json({ error: 'EVENTS_SHEETS_ID is not configured' });
+    }
+
+    const body = req.body;
+    if (!body.title || !body.startDate) {
+      return res.status(400).json({ error: 'title and startDate are required' });
+    }
+    const status = String(body.status || 'confirmed').trim().toLowerCase();
+    if (!VALID_STATUSES.includes(status)) {
+      return res.status(400).json({ error: `status must be one of: ${VALID_STATUSES.join(', ')}` });
+    }
+
+    const { headers, rows } = await readSheet(config.eventsSheetName, config.eventsSheetsId);
+
+    const values = fromEditableFields({ ...body, status });
+    values.row_id = nextRowId(rows);
+    values.timezone = 'America/Los_Angeles';
+    // sync_action='UPSERT' matches the value already present on every
+    // existing synced row, signalling events-sync to push this row to
+    // Calendar. event_id/checksum/last_synced_at/last_error are left blank
+    // on purpose - those are computed and written back by events-sync
+    // itself once it processes the row, never set by this app.
+    values.sync_action = 'UPSERT';
+
+    await appendRow(config.eventsSheetName, headers, values, config.eventsSheetsId);
+
+    res.status(201).json(toEventDetail(values));
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.put('/:rowNumber', async (req, res, next) => {
+  try {
+    if (!config.eventsSheetsId) {
+      return res.status(500).json({ error: 'EVENTS_SHEETS_ID is not configured' });
+    }
+
+    const rowNumber = parseInt(req.params.rowNumber, 10);
+    const body = req.body;
+    if (!body.title || !body.startDate) {
+      return res.status(400).json({ error: 'title and startDate are required' });
+    }
+    if (body.status !== undefined) {
+      const status = String(body.status).trim().toLowerCase();
+      if (!VALID_STATUSES.includes(status)) {
+        return res.status(400).json({ error: `status must be one of: ${VALID_STATUSES.join(', ')}` });
+      }
+    }
+
+    const { headers, rows } = await readSheet(config.eventsSheetName, config.eventsSheetsId);
+    const match = rows.find((r) => r.rowNumber === rowNumber);
+    if (!match) {
+      return res.status(404).json({ error: 'Event not found' });
+    }
+
+    const updatedValues = { ...match.values, ...fromEditableFields(body) };
+    await updateRow(config.eventsSheetName, rowNumber, headers, updatedValues, config.eventsSheetsId);
+
+    res.json(toEventDetail(updatedValues, rowNumber));
   } catch (err) {
     next(err);
   }

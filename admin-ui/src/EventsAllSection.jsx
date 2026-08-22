@@ -1,6 +1,7 @@
 import { Fragment, useEffect, useState } from 'react';
 import { api } from './api';
-import { SearchIcon } from './icons';
+import { SearchIcon, PlusIcon, PencilIcon } from './icons';
+import { EventFormModal } from './EventFormModal';
 
 const MONTH_NAMES = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
 
@@ -75,16 +76,25 @@ export function EventsAllSection() {
   const [error, setError] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [expandedIndex, setExpandedIndex] = useState(null);
+  const [formModal, setFormModal] = useState(null); // null | 'create' | event object to edit
 
-  useEffect(() => {
+  function load() {
+    setLoading(true);
     api.getAllEvents()
       .then((r) => setEvents(r.events))
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
-  }, []);
+  }
+
+  useEffect(load, []);
 
   const q = searchQuery.trim().toLowerCase();
   const filtered = events.filter((e) => !q || e.title.toLowerCase().includes(q));
+
+  function openEdit(domEvent, e) {
+    domEvent.stopPropagation();
+    setFormModal(e);
+  }
 
   async function toggleStatus(domEvent, e) {
     domEvent.stopPropagation();
@@ -103,17 +113,22 @@ export function EventsAllSection() {
     <div className="card card-flush">
       <div className="card-head" style={{ padding: '14px 16px 0' }}>
         <h2>Todos os eventos ({events.length})</h2>
-        <div className="search-box">
-          <SearchIcon />
-          <input
-            type="text"
-            placeholder="Buscar por título..."
-            value={searchQuery}
-            onChange={(e) => {
-              setSearchQuery(e.target.value);
-              setExpandedIndex(null);
-            }}
-          />
+        <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+          <div className="search-box">
+            <SearchIcon />
+            <input
+              type="text"
+              placeholder="Buscar por título..."
+              value={searchQuery}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                setExpandedIndex(null);
+              }}
+            />
+          </div>
+          <button className="btn-primary" onClick={() => setFormModal('create')}>
+            <PlusIcon /> Novo evento
+          </button>
         </div>
       </div>
 
@@ -133,6 +148,7 @@ export function EventsAllSection() {
                 <th>Hora fim</th>
                 <th>Recorrência</th>
                 <th>Status</th>
+                <th></th>
               </tr>
             </thead>
             <tbody>
@@ -165,10 +181,15 @@ export function EventsAllSection() {
                         <span className="pill pill-default" style={{ marginLeft: 6 }}>Fora do aviso semanal</span>
                       )}
                     </td>
+                    <td>
+                      <button className="icon-btn" onClick={(domEvent) => openEdit(domEvent, e)} title="Editar">
+                        <PencilIcon />
+                      </button>
+                    </td>
                   </tr>
                   {expandedIndex === i && (
                     <tr className="event-detail-row">
-                      <td colSpan={7}>
+                      <td colSpan={8}>
                         <EventDetail event={e} />
                       </td>
                     </tr>
@@ -181,6 +202,14 @@ export function EventsAllSection() {
       )}
 
       {!loading && filtered.length === 0 && <div className="empty-state">Nenhum evento encontrado.</div>}
+
+      {formModal && (
+        <EventFormModal
+          event={formModal === 'create' ? null : formModal}
+          onClose={() => setFormModal(null)}
+          onSaved={load}
+        />
+      )}
     </div>
   );
 }
