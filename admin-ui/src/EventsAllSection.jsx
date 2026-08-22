@@ -11,6 +11,21 @@ function fmtDateShort(dateStr) {
   return `${d.padStart(2, '0')} ${MONTH_NAMES[parseInt(m, 10) - 1] || ''}`;
 }
 
+// Matches shared/events.js's filter: blank or exactly 'confirmed' means the
+// event is shown in the weekly message; anything else (e.g. 'cancelled')
+// excludes it.
+function isEventActive(status) {
+  const s = (status || '').trim().toLowerCase();
+  return s === '' || s === 'confirmed';
+}
+
+function statusLabel(status) {
+  const s = (status || '').trim().toLowerCase();
+  if (s === 'cancelled') return 'Cancelado';
+  if (s === 'tentative') return 'Provisório';
+  return 'Confirmado';
+}
+
 function Item({ label, children }) {
   if (!children) return null;
   return (
@@ -22,16 +37,10 @@ function Item({ label, children }) {
 }
 
 function EventDetail({ event: e }) {
-  const timeLabel = e.allDay ? 'Dia inteiro' : [e.startTime, e.endTime].filter(Boolean).join(' – ');
-
   return (
     <div className="event-detail">
       <Item label="Descrição">{e.description}</Item>
       <Item label="Local">{e.location}</Item>
-      <Item label="Horário">{timeLabel}</Item>
-      <Item label="Recorrência">
-        {e.recurrenceRule && <span className="rrule-cell">{e.recurrenceRule}</span>}
-      </Item>
       <Item label="Inscrição">
         {e.registrationUrl && (
           <>
@@ -77,6 +86,19 @@ export function EventsAllSection() {
   const q = searchQuery.trim().toLowerCase();
   const filtered = events.filter((e) => !q || e.title.toLowerCase().includes(q));
 
+  async function toggleStatus(domEvent, e) {
+    domEvent.stopPropagation();
+    const nextStatus = isEventActive(e.status) ? 'cancelled' : 'confirmed';
+    const prevStatus = e.status;
+    setEvents((rows) => rows.map((r) => (r.rowNumber === e.rowNumber ? { ...r, status: nextStatus } : r)));
+    try {
+      await api.updateEventStatus(e.rowNumber, nextStatus);
+    } catch (err) {
+      setEvents((rows) => rows.map((r) => (r.rowNumber === e.rowNumber ? { ...r, status: prevStatus } : r)));
+      setError(err.message);
+    }
+  }
+
   return (
     <div className="card card-flush">
       <div className="card-head" style={{ padding: '14px 16px 0' }}>
@@ -105,7 +127,11 @@ export function EventsAllSection() {
             <thead>
               <tr>
                 <th>Título</th>
-                <th>Data</th>
+                <th>Início</th>
+                <th>Fim</th>
+                <th>Hora início</th>
+                <th>Hora fim</th>
+                <th>Recorrência</th>
                 <th>Status</th>
               </tr>
             </thead>
@@ -117,14 +143,24 @@ export function EventsAllSection() {
                     onClick={() => setExpandedIndex(expandedIndex === i ? null : i)}
                   >
                     <td>{e.title}</td>
+                    <td className="muted">{fmtDateShort(e.startDate) || '—'}</td>
                     <td className="muted">
-                      {fmtDateShort(e.startDate)}
-                      {e.endDate && e.endDate !== e.startDate ? ` – ${fmtDateShort(e.endDate)}` : ''}
+                      {e.endDate && e.endDate !== e.startDate ? fmtDateShort(e.endDate) : '—'}
+                    </td>
+                    <td className="muted">{e.allDay ? 'Dia inteiro' : (e.startTime || '—')}</td>
+                    <td className="muted">{e.allDay ? '—' : (e.endTime || '—')}</td>
+                    <td>
+                      {e.recurrenceRule
+                        ? <span className="rrule-cell">{e.recurrenceRule}</span>
+                        : <span className="muted">—</span>}
                     </td>
                     <td>
-                      <span className={`pill ${e.status === 'confirmed' ? 'pill-default' : 'pill-urgent'}`}>
-                        {e.status || '—'}
-                      </span>
+                      <button
+                        className={`status-pill ${isEventActive(e.status) ? 'active' : 'paused'}`}
+                        onClick={(domEvent) => toggleStatus(domEvent, e)}
+                      >
+                        {statusLabel(e.status)}
+                      </button>
                       {e.excludeWeekly && (
                         <span className="pill pill-default" style={{ marginLeft: 6 }}>Fora do aviso semanal</span>
                       )}
@@ -132,7 +168,7 @@ export function EventsAllSection() {
                   </tr>
                   {expandedIndex === i && (
                     <tr className="event-detail-row">
-                      <td colSpan={3}>
+                      <td colSpan={7}>
                         <EventDetail event={e} />
                       </td>
                     </tr>

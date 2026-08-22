@@ -12,8 +12,9 @@ const { buildEventEntries, formatMessage } = createEventsModule(RRule);
 // Only the fields a human cares about - the sheet has ~20 more columns of
 // events-sync bookkeeping (checksum, sync_action, event_id, last_synced_at,
 // program_sheet_id, ...) that aren't useful here.
-function toEventDetail(row) {
+function toEventDetail(row, rowNumber) {
   return {
+    rowNumber,
     rowId: row.row_id || '',
     title: row.title || '',
     description: row.description || '',
@@ -85,9 +86,8 @@ router.get('/all', async (req, res, next) => {
 
     const { rows } = await readSheet(config.eventsSheetName, config.eventsSheetsId);
     const events = rows
-      .map((r) => r.values)
-      .filter((row) => row.title)
-      .map(toEventDetail)
+      .filter((r) => r.values.title)
+      .map((r) => toEventDetail(r.values, r.rowNumber))
       .sort((a, b) => {
         const da = parseDate(a.startDate);
         const db = parseDate(b.startDate);
@@ -98,6 +98,43 @@ router.get('/all', async (req, res, next) => {
       });
 
     res.json({ events });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// Matches Google Calendar's event status vocabulary (this sheet is synced
+// via events-sync, which mirrors Calendar). shared/events.js only treats
+// exactly 'confirmed' (or a blank status) as "shown in the weekly message" -
+// any other value, including 'cancelled', excludes it.
+const VALID_STATUSES = ['confirmed', 'tentative', 'cancelled'];
+
+router.put('/:rowNumber/status', async (req, res, next) => {
+  try {
+    if (!config.eventsSheetsId) {
+      return res.status(500).json({ error: 'EVENTS_SHEETS_ID is not configured' });
+    }
+
+    const rowNumber = parseInt(req.params.rowNumber, 10);
+    const status = String(req.body.status || '').trim().toLowerCase();
+    if (!VALID_STATUSES.includes(status)) {
+      return res.status(400).json({ error: `status must be one of: ${VALID_STATUSES.join(', ')}` });
+    }
+
+    // row_id isn't guaranteed unique in this sheet, so match on the actual
+    // sheet row number instead. Read+merge the full row (not just `status`)
+    // so updateRow's full-row overwrite doesn't blank the ~20 events-sync
+    // bookkeeping columns admin-api doesn't know about individually.
+    const { headers, rows } = await readSheet(config.eventsSheetName, config.eventsSheetsId);
+    const match = rows.find((r) => r.rowNumber === rowNumber);
+    if (!match) {
+      return res.status(404).json({ error: 'Event not found' });
+    }
+
+    const updatedValues = { ...match.values, status };
+    await updateRow(config.eventsSheetName, rowNumber, headers, updatedValues, config.eventsSheetsId);
+
+    res.json(toEventDetail(updatedValues, rowNumber));
   } catch (err) {
     next(err);
   }
