@@ -64,6 +64,8 @@ jobs:
             ANNOUNCEMENT_SHEET_NAME=${{ secrets.ANNOUNCEMENT_SHEET_NAME }}
             BIRTHDAY_SHEET_NAME=${{ secrets.BIRTHDAY_SHEET_NAME }}
             SETTINGS_SHEET_NAME=Settings
+            EVENTS_SHEETS_ID=1_gwn-4tW7H4-2VBT5qM0xJAKG-ZIkvy_dEIHt9CnO6w
+            EVENTS_SHEET_NAME=Events
             GOOGLE_APPLICATION_CREDENTIALS=./service-account.json
             EOF
             echo "${{ secrets.GOOGLE_SERVICE_ACCOUNT_B64 }}" | base64 -d > admin-api/service-account.json

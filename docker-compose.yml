@@ -38,7 +38,9 @@ services:
     restart: unless-stopped
 
   weekly-announcement-bot:
-    build: ./weekly-announcement-bot
+    build:
+      context: .
+      dockerfile: weekly-announcement-bot/Dockerfile
     container_name: weekly-announcement-bot
     env_file: ./weekly-announcement-bot/.env
     depends_on:
@@ -55,7 +57,7 @@ services:
     container_name: admin-api
     env_file: ./admin-api/.env
     volumes:
-      - ./admin-api/service-account.json:/app/service-account.json:ro
+      - ./admin-api/service-account.json:/app/admin-api/service-account.json:ro
     networks:
       - whatsapp-net
     restart: unless-stopped

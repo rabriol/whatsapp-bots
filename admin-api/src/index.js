@@ -6,6 +6,7 @@ const config = require('./config');
 const announcementsRouter = require('./routes/announcements');
 const birthdaysRouter = require('./routes/birthdays');
 const birthdayScheduleRouter = require('./routes/birthdaySchedule');
+const eventsRouter = require('./routes/events');
 
 const app = express();
 app.use(express.json());
@@ -13,6 +14,7 @@ app.use(express.json());
 app.use('/api/announcements', announcementsRouter);
 app.use('/api/birthdays', birthdaysRouter);
 app.use('/api/birthday-schedule', birthdayScheduleRouter);
+app.use('/api/events', eventsRouter);
 
 app.get('/api/health', (req, res) => res.json({ ok: true }));
 

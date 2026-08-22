@@ -28,15 +28,17 @@ key | value
 
 The birthday schedule is stored there as `birthday_schedule_hour`, `birthday_schedule_minute`, `birthday_schedule_tz`.
 
+**Events live in a second, separate spreadsheet** — the same one `church-calendar`, `events-sync`, and `weekly-announcement-bot` read from (`EVENTS_SHEETS_ID`, tab `Events` by default). Share *that* spreadsheet with the service account too (Viewer access is enough — this route is read-only).
+
 ## Setup
 
 ```bash
-cp .env.example .env    # fill in GOOGLE_SHEETS_ID
+cp .env.example .env    # fill in GOOGLE_SHEETS_ID and EVENTS_SHEETS_ID
 cp service-account.example.json service-account.json   # replace with your real key
 npm install
 ```
 
-Share the Google Sheet with the service account's `client_email` (Editor access) before running.
+Share both Google Sheets with the service account's `client_email` before running: the main one (Editor access) and the events one (Viewer is enough).
 
 ## Run
 
@@ -49,3 +51,4 @@ npm start
 - `GET/POST /api/announcements`, `PUT/DELETE /api/announcements/:id`
 - `GET/POST /api/birthdays`, `PUT/DELETE /api/birthdays/:rowNumber`
 - `GET/PUT /api/birthday-schedule`
+- `GET /api/events/preview` — read-only, computes what `weekly-announcement-bot` would send this week

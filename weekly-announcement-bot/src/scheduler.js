@@ -1,9 +1,12 @@
 'use strict';
 
 const cron = require('node-cron');
+const { RRule } = require('rrule');
 const { fetchSheetRows } = require('./sheets');
-const { buildEventEntries, formatMessage } = require('./events');
+const { createEventsModule } = require('../../shared/events');
 const { sendMessage } = require('./sender');
+
+const { buildEventEntries, formatMessage } = createEventsModule(RRule);
 
 /**
  * Runs the weekly announcement job:

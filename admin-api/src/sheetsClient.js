@@ -21,12 +21,13 @@ function getSheets() {
 /**
  * Reads a sheet tab as an array of row objects, keyed by the header row.
  * @param {string} sheetName
+ * @param {string} [spreadsheetId] - defaults to the main announcements/birthdays spreadsheet
  * @returns {Promise<{headers: string[], rows: Array<{rowNumber: number, values: Record<string,string>}>}>}
  */
-async function readSheet(sheetName) {
+async function readSheet(sheetName, spreadsheetId) {
   const sheets = await getSheets();
   const res = await sheets.spreadsheets.values.get({
-    spreadsheetId: config.googleSheetsId,
+    spreadsheetId: spreadsheetId || config.googleSheetsId,
     range: sheetName,
   });
 
