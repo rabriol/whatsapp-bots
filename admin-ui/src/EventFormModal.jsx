@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { api } from './api';
 import { CloseIcon } from './icons';
+import { RecurrenceBuilder } from './RecurrenceBuilder';
 
 const STATUS_OPTIONS = [
   { value: 'confirmed', label: 'Confirmado' },
@@ -8,12 +9,60 @@ const STATUS_OPTIONS = [
   { value: 'cancelled', label: 'Cancelado' },
 ];
 
+const TIMEZONE_OPTIONS = [
+  'America/Los_Angeles', 'America/Denver', 'America/Chicago',
+  'America/New_York', 'Pacific/Honolulu', 'America/Anchorage',
+];
+
+const VISIBILITY_OPTIONS = [
+  { value: '', label: '(padrão do Calendar)' },
+  { value: 'default', label: 'Padrão' },
+  { value: 'public', label: 'Público' },
+  { value: 'private', label: 'Privado' },
+  { value: 'confidential', label: 'Confidencial' },
+];
+
+// Google Calendar's 11 named event colors (colorId names, not the numeric
+// ids) - hex values here are just approximate swatches for the picker.
+const COLOR_OPTIONS = [
+  { value: '', label: '(nenhuma)', hex: null },
+  { value: 'lavender', label: 'Lavanda', hex: '#7986CB' },
+  { value: 'sage', label: 'Sálvia', hex: '#33B679' },
+  { value: 'grape', label: 'Uva', hex: '#8E24AA' },
+  { value: 'flamingo', label: 'Flamingo', hex: '#E67C73' },
+  { value: 'banana', label: 'Banana', hex: '#F6BF26' },
+  { value: 'tangerine', label: 'Tangerina', hex: '#F4511E' },
+  { value: 'peacock', label: 'Pavão', hex: '#039BE5' },
+  { value: 'graphite', label: 'Grafite', hex: '#616161' },
+  { value: 'blueberry', label: 'Mirtilo', hex: '#3F51B5' },
+  { value: 'basil', label: 'Manjericão', hex: '#0B8043' },
+  { value: 'tomato', label: 'Tomate', hex: '#D50000' },
+];
+
 const EMPTY_DRAFT = {
   title: '', description: '', location: '',
   startDate: '', endDate: '', startTime: '', endTime: '',
   allDay: false, recurrenceRule: '', status: 'confirmed',
   zoomUrl: '', youtubeUrl: '', isLive: false,
+  timezone: 'America/Los_Angeles', attendees: '', reminders: [],
+  visibility: '', colorId: '', htmlDescription: '',
 };
+
+// reminders is stored as "method:minutes" pairs joined by comma (e.g.
+// "popup:30,email:60"). Only ever seen a single reminder in real data, so
+// the multi-value delimiter is our best guess - verify against a real save
+// before trusting it further.
+function parseReminders(s) {
+  if (!s) return [];
+  return s.split(',').map((part) => {
+    const [method, minutes] = part.split(':');
+    return { method: (method || 'popup').trim(), minutes: parseInt(minutes, 10) || 0 };
+  }).filter((r) => r.minutes > 0);
+}
+
+function serializeReminders(list) {
+  return list.filter((r) => r.minutes > 0).map((r) => `${r.method}:${r.minutes}`).join(',');
+}
 
 // The sheet stores dates/times as plain text in "M/D/YYYY" and
 // "h:mm:ss AM/PM" (e.g. "2/21/2026", "6:00:00 PM") - matching the format
@@ -69,6 +118,12 @@ function eventToDraft(e) {
     zoomUrl: e.zoomUrl || '',
     youtubeUrl: e.youtubeUrl || '',
     isLive: !!e.isLive,
+    timezone: e.timezone || 'America/Los_Angeles',
+    attendees: e.attendees || '',
+    reminders: parseReminders(e.reminders),
+    visibility: e.visibility || '',
+    colorId: e.colorId || '',
+    htmlDescription: e.htmlDescription || '',
   };
 }
 
@@ -87,6 +142,12 @@ function draftToPayload(d) {
     zoomUrl: d.zoomUrl.trim(),
     youtubeUrl: d.youtubeUrl.trim(),
     isLive: d.isLive,
+    timezone: d.timezone,
+    attendees: d.attendees.trim(),
+    reminders: serializeReminders(d.reminders),
+    visibility: d.visibility,
+    colorId: d.colorId,
+    htmlDescription: d.htmlDescription.trim(),
   };
 }
 
@@ -181,13 +242,13 @@ export function EventFormModal({ event, onClose, onSaved }) {
           )}
 
           <div className="field">
-            <label>Recorrência (RRULE, opcional)</label>
-            <input
-              type="text" placeholder="RRULE:FREQ=WEEKLY;BYDAY=SA"
-              value={draft.recurrenceRule} onChange={(e) => set('recurrenceRule', e.target.value)}
-            />
-            <div className="field-hint">Deixe em branco para um evento único, sem repetição.</div>
+            <label>Fuso horário</label>
+            <select value={draft.timezone} onChange={(e) => set('timezone', e.target.value)}>
+              {TIMEZONE_OPTIONS.map((tz) => <option key={tz} value={tz}>{tz}</option>)}
+            </select>
           </div>
+
+          <RecurrenceBuilder value={draft.recurrenceRule} onChange={(v) => set('recurrenceRule', v)} />
 
           <div className="field">
             <label>Status</label>
@@ -214,6 +275,77 @@ export function EventFormModal({ event, onClose, onSaved }) {
           >
             Transmissão ao vivo
           </button>
+
+          <div className="field">
+            <label>Participantes (e-mails separados por vírgula)</label>
+            <input
+              type="text" placeholder="fulano@exemplo.com, ciclana@exemplo.com"
+              value={draft.attendees} onChange={(e) => set('attendees', e.target.value)}
+            />
+          </div>
+
+          <div className="field">
+            <label>Lembretes</label>
+            {draft.reminders.map((r, i) => (
+              <div key={i} className="field-row" style={{ marginBottom: 6, alignItems: 'center' }}>
+                <select
+                  value={r.method}
+                  onChange={(e) => set('reminders', draft.reminders.map((x, idx) => (idx === i ? { ...x, method: e.target.value } : x)))}
+                >
+                  <option value="popup">Popup</option>
+                  <option value="email">E-mail</option>
+                </select>
+                <input
+                  type="number" min="1" placeholder="minutos antes" value={r.minutes || ''}
+                  onChange={(e) => set('reminders', draft.reminders.map((x, idx) => (idx === i ? { ...x, minutes: parseInt(e.target.value, 10) || 0 } : x)))}
+                />
+                <button
+                  type="button" className="icon-btn" title="Remover"
+                  onClick={() => set('reminders', draft.reminders.filter((_, idx) => idx !== i))}
+                >
+                  <CloseIcon />
+                </button>
+              </div>
+            ))}
+            <button
+              type="button" className="btn-ghost" style={{ alignSelf: 'flex-start' }}
+              onClick={() => set('reminders', [...draft.reminders, { method: 'popup', minutes: 30 }])}
+            >
+              + Adicionar lembrete
+            </button>
+          </div>
+
+          <div className="field">
+            <label>Visibilidade</label>
+            <select value={draft.visibility} onChange={(e) => set('visibility', e.target.value)}>
+              {VISIBILITY_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+            </select>
+          </div>
+
+          <div className="field">
+            <label>Cor no Calendar</label>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+              {COLOR_OPTIONS.map((c) => (
+                <button
+                  key={c.value} type="button" title={c.label}
+                  className={`freq-chip ${draft.colorId === c.value ? 'active' : ''}`}
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
+                  onClick={() => set('colorId', c.value)}
+                >
+                  {c.hex && <span style={{ width: 10, height: 10, borderRadius: '50%', background: c.hex, display: 'inline-block' }} />}
+                  {c.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="field">
+            <label>Descrição HTML (opcional)</label>
+            <textarea
+              placeholder="<p>Descrição formatada em HTML...</p>"
+              value={draft.htmlDescription} onChange={(e) => set('htmlDescription', e.target.value)}
+            />
+          </div>
         </div>
 
         <div className="modal-actions">

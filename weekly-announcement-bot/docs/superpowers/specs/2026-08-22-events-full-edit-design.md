@@ -46,20 +46,23 @@ Todos entram em `EDITABLE_FIELD_MAP` em `admin-api/src/routes/events.js`, seguin
 
 ## Construtor de Recorrência
 
-### Descoberta técnica: formato não é iCalendar padrão
+### Descoberta técnica: formato da célula
 
-Nos dados reais, quando existe exceção, RRULE e EXDATE vêm **na mesma célula, separados por um espaço**:
+Nos dados reais, quando existe exceção, RRULE e EXDATE vêm **na mesma célula, em linhas separadas** (`\n`), estilo iCalendar VEVENT padrão:
 
 ```
-RRULE:FREQ=MONTHLY;BYDAY=SA;BYSETPOS=1;UNTIL=20261226T235959Z EXDATE:20260606T190000,20260801T190000
+RRULE:FREQ=MONTHLY;BYDAY=SA;BYSETPOS=1;UNTIL=20261226T235959Z
+EXDATE:20260606T190000,20260801T190000
 ```
 
-Isso não é RFC5545 padrão (que usaria linhas/propriedades separadas dentro de um VEVENT). Não dá pra jogar a célula inteira em `rrulestr()` da biblioteca `rrule`. O parsing/geração precisa:
+(Correção: uma versão anterior deste spec descrevia isso como separado por espaço — era uma leitura errada do texto renderizado no navegador, que colapsa quebras de linha visualmente. O valor bruto real, confirmado via API, usa `\n`.)
 
-1. Separar a célula pelo literal `" EXDATE:"` (regex) em `rrulePart` e `exdatePart` (este último pode não existir).
+Ainda assim não dá pra jogar a célula inteira em `rrulestr()` da biblioteca `rrule` de uma vez, porque **o formato do EXDATE não é consistente**: a maioria das ocorrências reais não tem sufixo `Z` (horário local, provavelmente batendo com o horário de início do evento), mas ao menos uma tem `Z` (UTC). O parsing/geração precisa:
+
+1. Separar a célula por linha (`\n`), pegar a primeira linha como `rrulePart` e procurar uma linha começando com `EXDATE:` como `exdatePart` (pode não existir).
 2. `rrulePart` → `RRule.fromString(rrulePart)` da biblioteca `rrule` (já usada em `admin-api` e `weekly-announcement-bot`, versão `^2.8.1` — adicionar a mesma versão em `admin-ui`).
-3. `exdatePart` → split por vírgula, cada item é uma data-hora **sem sufixo `Z`** (horário local, não UTC — diferente de `UNTIL`, que tem `Z`). Formato: `YYYYMMDDTHHMMSS`.
-4. Ao salvar, remontar: `rrule.toString()` + (se houver exceções) `" EXDATE:" + exdates.join(',')`.
+3. `exdatePart` → split por vírgula, cada item é uma data-hora no formato `YYYYMMDDTHHMMSS`, com um sufixo `Z` opcional. Guardar se cada exceção tinha `Z` ou não, e preservar isso ao salvar — nunca normalizar, já que não sabemos o significado real da inconsistência.
+4. Ao salvar, remontar: `rrule.toString()` + (se houver exceções) `"\nEXDATE:" + exdates.join(',')`, reaplicando o sufixo `Z` original de cada exceção existente.
 
 ### UI (estilo Google Calendar)
 

@@ -37,15 +37,19 @@ function toEventDetail(row, rowNumber) {
     attendees: row.attendees || '',
     reminders: row.reminders || '',
     visibility: row.visibility || '',
+    colorId: row.color_id || '',
+    htmlDescription: row.html_description || '',
   };
 }
 
-// Fields admin-ui lets a human create/edit. Deliberately excludes the
-// events-sync bookkeeping columns (sync_action, event_id, checksum,
-// last_synced_at, last_error, program_sheet_id, color_id) and the
-// registration_*/exclude_weekly/attendees/reminders/visibility columns,
-// which either don't exist in this sheet or use Calendar-API-specific
-// formats no form here validates.
+// Fields admin-ui lets a human create/edit - every real content column in
+// this sheet. Deliberately excludes the events-sync bookkeeping columns
+// (sync_action, event_id, checksum, last_synced_at, last_error,
+// program_sheet_id) and registration_url/registration_button_text/
+// registration_deadline/exclude_weekly, which don't exist as columns in
+// this particular sheet despite toEventDetail() referencing them (dead
+// fields, always blank - see the admin-api README/config comments on the
+// shared events-sync spreadsheet).
 const EDITABLE_FIELD_MAP = {
   title: 'title',
   description: 'description',
@@ -55,11 +59,17 @@ const EDITABLE_FIELD_MAP = {
   endDate: 'end_date',
   endTime: 'end_time',
   allDay: 'all_day',
+  timezone: 'timezone',
   recurrenceRule: 'recurrence_rule',
   status: 'status',
   zoomUrl: 'zoom_url',
   youtubeUrl: 'youtube_url',
   isLive: 'is_live',
+  attendees: 'attendees',
+  reminders: 'reminders',
+  visibility: 'visibility',
+  colorId: 'color_id',
+  htmlDescription: 'html_description',
 };
 
 function fromEditableFields(body) {
@@ -248,7 +258,7 @@ router.post('/', async (req, res, next) => {
 
     const values = fromEditableFields({ ...body, status });
     values.row_id = nextRowId(rows);
-    values.timezone = 'America/Los_Angeles';
+    values.timezone = values.timezone || 'America/Los_Angeles';
     // sync_action='UPSERT' matches the value already present on every
     // existing synced row, signalling events-sync to push this row to
     // Calendar. event_id/checksum/last_synced_at/last_error are left blank
