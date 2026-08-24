@@ -141,6 +141,13 @@ a:hover {
   margin: 0 auto;
 }
 
+/* Todos os Eventos has far more columns than any other page (17) - let it
+   use most of the viewport instead of the standard content width, so more
+   columns fit before the table needs horizontal scrolling. */
+.content-wide {
+  max-width: 1800px;
+}
+
 .page-head {
   display: flex;
   align-items: flex-start;
