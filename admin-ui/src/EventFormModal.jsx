@@ -24,7 +24,7 @@ const VISIBILITY_OPTIONS = [
 
 // Google Calendar's 11 named event colors (colorId names, not the numeric
 // ids) - hex values here are just approximate swatches for the picker.
-const COLOR_OPTIONS = [
+export const COLOR_OPTIONS = [
   { value: '', label: '(nenhuma)', hex: null },
   { value: 'lavender', label: 'Lavanda', hex: '#7986CB' },
   { value: 'sage', label: 'Sálvia', hex: '#33B679' },

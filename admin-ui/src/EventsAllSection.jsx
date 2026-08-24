@@ -1,7 +1,9 @@
 import { Fragment, useEffect, useState } from 'react';
 import { api } from './api';
 import { SearchIcon, PlusIcon, PencilIcon } from './icons';
-import { EventFormModal } from './EventFormModal';
+import { EventFormModal, COLOR_OPTIONS } from './EventFormModal';
+
+const TRUNCATE_STYLE = { maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' };
 
 const MONTH_NAMES = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
 
@@ -44,17 +46,10 @@ function Item({ label, children }) {
 function EventDetail({ event: e }) {
   return (
     <div className="event-detail">
-      <Item label="Descrição">{e.description}</Item>
       <Item label="Local">{e.location}</Item>
-      <Item label="Inscrição">
-        {e.registrationUrl && (
-          <>
-            <a href={e.registrationUrl} target="_blank" rel="noreferrer">
-              {e.registrationButtonText || e.registrationUrl}
-            </a>
-            {e.registrationDeadline ? ` · até ${e.registrationDeadline}` : ''}
-          </>
-        )}
+      <Item label="Descrição">{e.description}</Item>
+      <Item label="Descrição HTML">
+        {e.htmlDescription && <span className="rrule-cell">{e.htmlDescription}</span>}
       </Item>
       <Item label="Zoom">
         {e.zoomUrl && <a href={e.zoomUrl} target="_blank" rel="noreferrer">{e.zoomUrl}</a>}
@@ -67,9 +62,6 @@ function EventDetail({ event: e }) {
           </>
         )}
       </Item>
-      <Item label="Participantes">{e.attendees}</Item>
-      <Item label="Lembretes">{e.reminders}</Item>
-      <Item label="Visibilidade">{e.visibility}</Item>
     </div>
   );
 }
@@ -146,62 +138,99 @@ export function EventsAllSection() {
             <thead>
               <tr>
                 <th>Título</th>
+                <th>Status</th>
                 <th>Início</th>
                 <th>Fim</th>
                 <th>Hora início</th>
                 <th>Hora fim</th>
                 <th>Recorrência</th>
-                <th>Status</th>
+                <th>Fuso horário</th>
+                <th>Local</th>
+                <th>Descrição</th>
+                <th>Zoom</th>
+                <th>YouTube</th>
+                <th>Participantes</th>
+                <th>Lembretes</th>
+                <th>Visibilidade</th>
+                <th>Cor</th>
                 <th></th>
               </tr>
             </thead>
             <tbody>
-              {filtered.map((e, i) => (
-                <Fragment key={i}>
-                  <tr
-                    className="event-row"
-                    onClick={() => setExpandedIndex(expandedIndex === i ? null : i)}
-                  >
-                    <td style={isCancelled(e.status) ? { textDecoration: 'line-through', opacity: 0.6 } : undefined}>
-                      {e.title}
-                    </td>
-                    <td className="muted">{fmtDateShort(e.startDate) || '—'}</td>
-                    <td className="muted">
-                      {e.endDate && e.endDate !== e.startDate ? fmtDateShort(e.endDate) : '—'}
-                    </td>
-                    <td className="muted">{e.allDay ? 'Dia inteiro' : (e.startTime || '—')}</td>
-                    <td className="muted">{e.allDay ? '—' : (e.endTime || '—')}</td>
-                    <td>
-                      {e.recurrenceRule
-                        ? <span className="rrule-cell">{e.recurrenceRule}</span>
-                        : <span className="muted">—</span>}
-                    </td>
-                    <td>
-                      <button
-                        className={`status-pill ${isEventActive(e.status) ? 'active' : 'paused'}`}
-                        onClick={(domEvent) => toggleStatus(domEvent, e)}
-                      >
-                        {statusLabel(e.status)}
-                      </button>
-                      {e.excludeWeekly && (
-                        <span className="pill pill-default" style={{ marginLeft: 6 }}>Fora do aviso semanal</span>
-                      )}
-                    </td>
-                    <td>
-                      <button className="icon-btn" onClick={(domEvent) => openEdit(domEvent, e)} title="Editar">
-                        <PencilIcon />
-                      </button>
-                    </td>
-                  </tr>
-                  {expandedIndex === i && (
-                    <tr className="event-detail-row">
-                      <td colSpan={8}>
-                        <EventDetail event={e} />
+              {filtered.map((e, i) => {
+                const color = COLOR_OPTIONS.find((c) => c.value === e.colorId);
+                return (
+                  <Fragment key={i}>
+                    <tr
+                      className="event-row"
+                      onClick={() => setExpandedIndex(expandedIndex === i ? null : i)}
+                    >
+                      <td style={isCancelled(e.status) ? { textDecoration: 'line-through', opacity: 0.6 } : undefined}>
+                        {e.title}
+                      </td>
+                      <td>
+                        <button
+                          className={`status-pill ${isEventActive(e.status) ? 'active' : 'paused'}`}
+                          onClick={(domEvent) => toggleStatus(domEvent, e)}
+                        >
+                          {statusLabel(e.status)}
+                        </button>
+                      </td>
+                      <td className="muted">{fmtDateShort(e.startDate) || '—'}</td>
+                      <td className="muted">
+                        {e.endDate && e.endDate !== e.startDate ? fmtDateShort(e.endDate) : '—'}
+                      </td>
+                      <td className="muted">{e.allDay ? 'Dia inteiro' : (e.startTime || '—')}</td>
+                      <td className="muted">{e.allDay ? '—' : (e.endTime || '—')}</td>
+                      <td>
+                        {e.recurrenceRule
+                          ? <span className="rrule-cell">{e.recurrenceRule}</span>
+                          : <span className="muted">—</span>}
+                      </td>
+                      <td className="muted">{e.timezone || '—'}</td>
+                      <td className="muted" style={TRUNCATE_STYLE} title={e.location || undefined}>{e.location || '—'}</td>
+                      <td className="muted" style={TRUNCATE_STYLE} title={e.description || undefined}>{e.description || '—'}</td>
+                      <td>
+                        {e.zoomUrl
+                          ? <a href={e.zoomUrl} target="_blank" rel="noreferrer" onClick={(ev) => ev.stopPropagation()}>Abrir ↗</a>
+                          : <span className="muted">—</span>}
+                      </td>
+                      <td>
+                        {e.youtubeUrl
+                          ? (
+                            <a href={e.youtubeUrl} target="_blank" rel="noreferrer" onClick={(ev) => ev.stopPropagation()}>
+                              Abrir ↗{e.isLive ? ' · ao vivo' : ''}
+                            </a>
+                          )
+                          : <span className="muted">—</span>}
+                      </td>
+                      <td className="muted" style={TRUNCATE_STYLE} title={e.attendees || undefined}>{e.attendees || '—'}</td>
+                      <td className="muted">{e.reminders || '—'}</td>
+                      <td className="muted">{e.visibility || '—'}</td>
+                      <td>
+                        {color?.hex ? (
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                            <span style={{ width: 10, height: 10, borderRadius: '50%', background: color.hex, display: 'inline-block' }} />
+                            {color.label}
+                          </span>
+                        ) : <span className="muted">—</span>}
+                      </td>
+                      <td>
+                        <button className="icon-btn" onClick={(domEvent) => openEdit(domEvent, e)} title="Editar">
+                          <PencilIcon />
+                        </button>
                       </td>
                     </tr>
-                  )}
-                </Fragment>
-              ))}
+                    {expandedIndex === i && (
+                      <tr className="event-detail-row">
+                        <td colSpan={17}>
+                          <EventDetail event={e} />
+                        </td>
+                      </tr>
+                    )}
+                  </Fragment>
+                );
+              })}
             </tbody>
           </table>
         </div>
