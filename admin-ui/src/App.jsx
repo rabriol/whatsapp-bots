@@ -2,40 +2,37 @@ import { useState } from 'react';
 import Birthdays from './pages/Birthdays';
 import Announcements from './pages/Announcements';
 import Events from './pages/Events';
+import AllEvents from './pages/AllEvents';
 import { ThemeToggle } from './ThemeToggle';
 import { LogoutIcon } from './icons';
 
-const PAGES = {
+const BOT_PAGES = {
   birthdays: Birthdays,
   announcements: Announcements,
   events: Events,
 };
 
 export default function App() {
-  const [tab, setTab] = useState('birthdays');
-  const Page = PAGES[tab];
+  const [group, setGroup] = useState('bots'); // 'bots' | 'allEvents'
+  const [botTab, setBotTab] = useState('birthdays');
+
+  const Page = group === 'bots' ? BOT_PAGES[botTab] : AllEvents;
 
   return (
     <div className="page">
       <div className="topbar">
         <div className="nav">
           <button
-            className={`nav-item ${tab === 'birthdays' ? 'active' : ''}`}
-            onClick={() => setTab('birthdays')}
+            className={`nav-item ${group === 'bots' ? 'active' : ''}`}
+            onClick={() => setGroup('bots')}
           >
-            Aniversariantes
+            Bots
           </button>
           <button
-            className={`nav-item ${tab === 'announcements' ? 'active' : ''}`}
-            onClick={() => setTab('announcements')}
+            className={`nav-item ${group === 'allEvents' ? 'active' : ''}`}
+            onClick={() => setGroup('allEvents')}
           >
-            Anúncios
-          </button>
-          <button
-            className={`nav-item ${tab === 'events' ? 'active' : ''}`}
-            onClick={() => setTab('events')}
-          >
-            Eventos
+            Todos os Eventos
           </button>
         </div>
         <div className="topbar-right">
@@ -46,6 +43,29 @@ export default function App() {
           </a>
         </div>
       </div>
+
+      {group === 'bots' && (
+        <div className="subnav">
+          <button
+            className={`subnav-item ${botTab === 'birthdays' ? 'active' : ''}`}
+            onClick={() => setBotTab('birthdays')}
+          >
+            Aniversariantes
+          </button>
+          <button
+            className={`subnav-item ${botTab === 'announcements' ? 'active' : ''}`}
+            onClick={() => setBotTab('announcements')}
+          >
+            Anúncios
+          </button>
+          <button
+            className={`subnav-item ${botTab === 'events' ? 'active' : ''}`}
+            onClick={() => setBotTab('events')}
+          >
+            Eventos
+          </button>
+        </div>
+      )}
 
       <Page />
     </div>

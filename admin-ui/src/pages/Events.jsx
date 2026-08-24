@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react';
 import { api } from '../api';
 import { ClockIcon, EventIcon, CheckIcon } from '../icons';
 import { WhatsAppText } from '../WhatsAppText';
-import { EventsAllSection } from '../EventsAllSection';
 
 export default function Events() {
   const [preview, setPreview] = useState(null);
@@ -119,8 +118,6 @@ export default function Events() {
           </div>
         </div>
       )}
-
-      <EventsAllSection />
     </div>
   );
 }
