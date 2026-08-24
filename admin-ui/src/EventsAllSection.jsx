@@ -27,6 +27,10 @@ function statusLabel(status) {
   return 'Confirmado';
 }
 
+function isCancelled(status) {
+  return (status || '').trim().toLowerCase() === 'cancelled';
+}
+
 function Item({ label, children }) {
   if (!children) return null;
   return (
@@ -158,7 +162,9 @@ export function EventsAllSection() {
                     className="event-row"
                     onClick={() => setExpandedIndex(expandedIndex === i ? null : i)}
                   >
-                    <td>{e.title}</td>
+                    <td style={isCancelled(e.status) ? { textDecoration: 'line-through', opacity: 0.6 } : undefined}>
+                      {e.title}
+                    </td>
                     <td className="muted">{fmtDateShort(e.startDate) || '—'}</td>
                     <td className="muted">
                       {e.endDate && e.endDate !== e.startDate ? fmtDateShort(e.endDate) : '—'}
