@@ -39,13 +39,19 @@ export const COLOR_OPTIONS = [
   { value: 'tomato', label: 'Tomate', hex: '#D50000' },
 ];
 
+// More churches can be added here later - for now just these two.
+export const CHURCH_OPTIONS = [
+  { value: 'orangevale', label: 'Igreja Orangevale' },
+  { value: 'ncc', label: 'NCC' },
+];
+
 const EMPTY_DRAFT = {
   title: '', description: '', location: '',
   startDate: '', endDate: '', startTime: '', endTime: '',
   allDay: false, recurrenceRule: '', status: 'confirmed',
   zoomUrl: '', youtubeUrl: '', isLive: false,
   timezone: 'America/Los_Angeles', attendees: '', reminders: [],
-  visibility: '', colorId: '', htmlDescription: '',
+  visibility: '', colorId: '', htmlDescription: '', church: 'orangevale',
 };
 
 // reminders is stored as "method:minutes" pairs joined by comma (e.g.
@@ -124,6 +130,7 @@ function eventToDraft(e) {
     visibility: e.visibility || '',
     colorId: e.colorId || '',
     htmlDescription: e.htmlDescription || '',
+    church: e.church || 'orangevale',
   };
 }
 
@@ -148,6 +155,7 @@ function draftToPayload(d) {
     visibility: d.visibility,
     colorId: d.colorId,
     htmlDescription: d.htmlDescription.trim(),
+    church: d.church,
   };
 }
 
@@ -196,6 +204,13 @@ export function EventFormModal({ event, onClose, onSaved }) {
           <div className="field">
             <label>Título</label>
             <input type="text" value={draft.title} onChange={(e) => set('title', e.target.value)} />
+          </div>
+
+          <div className="field">
+            <label>Igreja</label>
+            <select value={draft.church} onChange={(e) => set('church', e.target.value)}>
+              {CHURCH_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+            </select>
           </div>
 
           <div className="field">

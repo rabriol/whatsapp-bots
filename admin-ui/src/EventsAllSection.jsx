@@ -1,7 +1,7 @@
 import { Fragment, useEffect, useState } from 'react';
 import { api } from './api';
 import { SearchIcon, PlusIcon, PencilIcon } from './icons';
-import { EventFormModal, COLOR_OPTIONS } from './EventFormModal';
+import { EventFormModal, COLOR_OPTIONS, CHURCH_OPTIONS } from './EventFormModal';
 
 const TRUNCATE_STYLE = { maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' };
 
@@ -138,6 +138,7 @@ export function EventsAllSection() {
             <thead>
               <tr>
                 <th>Título</th>
+                <th>Igreja</th>
                 <th>Status</th>
                 <th>Início</th>
                 <th>Fim</th>
@@ -159,6 +160,7 @@ export function EventsAllSection() {
             <tbody>
               {filtered.map((e, i) => {
                 const color = COLOR_OPTIONS.find((c) => c.value === e.colorId);
+                const church = CHURCH_OPTIONS.find((c) => c.value === e.church);
                 return (
                   <Fragment key={i}>
                     <tr
@@ -168,6 +170,7 @@ export function EventsAllSection() {
                       <td style={isCancelled(e.status) ? { textDecoration: 'line-through', opacity: 0.6 } : undefined}>
                         {e.title}
                       </td>
+                      <td className="muted">{church?.label || '—'}</td>
                       <td>
                         <button
                           className={`status-pill ${isEventActive(e.status) ? 'active' : 'paused'}`}
@@ -223,7 +226,7 @@ export function EventsAllSection() {
                     </tr>
                     {expandedIndex === i && (
                       <tr className="event-detail-row">
-                        <td colSpan={17}>
+                        <td colSpan={18}>
                           <EventDetail event={e} />
                         </td>
                       </tr>

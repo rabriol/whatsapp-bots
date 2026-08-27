@@ -39,6 +39,7 @@ function toEventDetail(row, rowNumber) {
     visibility: row.visibility || '',
     colorId: row.color_id || '',
     htmlDescription: row.html_description || '',
+    church: row.church || '',
   };
 }
 
@@ -46,10 +47,14 @@ function toEventDetail(row, rowNumber) {
 // this sheet. Deliberately excludes the events-sync bookkeeping columns
 // (sync_action, event_id, checksum, last_synced_at, last_error,
 // program_sheet_id) and registration_url/registration_button_text/
-// registration_deadline/exclude_weekly, which don't exist as columns in
-// this particular sheet despite toEventDetail() referencing them (dead
-// fields, always blank - see the admin-api README/config comments on the
-// shared events-sync spreadsheet).
+// registration_deadline/fundraiser_data_sheet_id/fundraiser_data_gid, which
+// don't exist as columns in this particular sheet despite toEventDetail()
+// referencing some of them (dead fields, always blank - see the admin-api
+// README/config comments on the shared events-sync spreadsheet).
+// exclude_weekly is a real column too (confirmed against the full header
+// row, A1:AZ1 - an earlier version of this comment wrongly listed it as
+// dead, from a header scan that only checked columns A-Z) - just not yet
+// exposed here since there's no dedicated UI control for it.
 const EDITABLE_FIELD_MAP = {
   title: 'title',
   description: 'description',
@@ -70,6 +75,7 @@ const EDITABLE_FIELD_MAP = {
   visibility: 'visibility',
   colorId: 'color_id',
   htmlDescription: 'html_description',
+  church: 'church',
 };
 
 function fromEditableFields(body) {
