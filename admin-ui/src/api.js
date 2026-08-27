@@ -32,4 +32,7 @@ export const api = {
   updateEventStatus: (rowNumber, status) => request(`/events/${rowNumber}/status`, { method: 'PUT', body: JSON.stringify({ status }) }),
   getEventsWindow: () => request('/events/window'),
   updateEventsWindow: (windowDays) => request('/events/window', { method: 'PUT', body: JSON.stringify({ windowDays }) }),
+
+  getSendSchedule: () => request('/events/send-schedule'),
+  updateSendSchedule: (data) => request('/events/send-schedule', { method: 'PUT', body: JSON.stringify(data) }),
 };

@@ -177,7 +177,7 @@ export function generateCell(d) {
   return str;
 }
 
-export function RecurrenceBuilder({ value, onChange }) {
+export function RecurrenceBuilder({ value, onChange, allowExceptions = true }) {
   const [d, setD] = useState(() => parseCell(value));
 
   useEffect(() => {
@@ -328,7 +328,7 @@ export function RecurrenceBuilder({ value, onChange }) {
         </div>
       )}
 
-      {d.freq !== 'none' && (
+      {d.freq !== 'none' && allowExceptions && (
         <div className="field">
           <label>Exceções (datas puladas)</label>
           {d.exdates.map((ex, i) => (
@@ -347,9 +347,11 @@ export function RecurrenceBuilder({ value, onChange }) {
         RRULE gerado: <span className="rrule-cell">{generateCell(d) || '(nenhuma recorrência)'}</span>
       </div>
 
-      <button type="button" className="btn-ghost" style={{ alignSelf: 'flex-start' }} onClick={() => set('advanced', true)}>
-        Editar como texto (avançado)
-      </button>
+      {allowExceptions && (
+        <button type="button" className="btn-ghost" style={{ alignSelf: 'flex-start' }} onClick={() => set('advanced', true)}>
+          Editar como texto (avançado)
+        </button>
+      )}
     </div>
   );
 }

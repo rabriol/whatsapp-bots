@@ -1,28 +1,58 @@
 import { useEffect, useState } from 'react';
+import { RRule } from 'rrule';
 import { api } from '../api';
 import { ClockIcon, EventIcon, CheckIcon } from '../icons';
 import { WhatsAppText } from '../WhatsAppText';
+import { RecurrenceBuilder } from '../RecurrenceBuilder';
+
+const WEEKDAY_LABELS = { MO: 'segunda', TU: 'terça', WE: 'quarta', TH: 'quinta', FR: 'sexta', SA: 'sábado', SU: 'domingo' };
+const WEEKDAY_BY_INDEX = ['MO', 'TU', 'WE', 'TH', 'FR', 'SA', 'SU'];
+
+function humanizeSendSchedule(rruleStr, time) {
+  let label;
+  try {
+    const o = RRule.fromString(rruleStr).origOptions;
+    const byweekdayArr = o.byweekday ? (Array.isArray(o.byweekday) ? o.byweekday : [o.byweekday]) : [];
+    const days = byweekdayArr.map((w) => WEEKDAY_LABELS[WEEKDAY_BY_INDEX[w.weekday]]).filter(Boolean);
+    if (o.freq === RRule.DAILY) label = 'Todos os dias';
+    else if (o.freq === RRule.WEEKLY) label = days.length ? `Toda semana, ${days.join(' e ')}` : 'Toda semana';
+    else if (o.freq === RRule.MONTHLY) label = days.length ? `Todo mês, ${days.join(' e ')}` : 'Todo mês';
+    else label = rruleStr;
+  } catch {
+    label = rruleStr;
+  }
+  return `${label} às ${time} (Los Angeles)`;
+}
 
 export default function Events() {
   const [preview, setPreview] = useState(null);
+  const [sendSchedule, setSendSchedule] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
   const [editingWindow, setEditingWindow] = useState(false);
   const [draftWindow, setDraftWindow] = useState(45);
-  const [savedFlash, setSavedFlash] = useState(false);
+  const [windowSavedFlash, setWindowSavedFlash] = useState(false);
+
+  const [editingSchedule, setEditingSchedule] = useState(false);
+  const [draftRrule, setDraftRrule] = useState('');
+  const [draftTime, setDraftTime] = useState('11:00');
+  const [scheduleSavedFlash, setScheduleSavedFlash] = useState(false);
 
   function load() {
     setLoading(true);
-    api.getEventsPreview()
-      .then(setPreview)
+    Promise.all([api.getEventsPreview(), api.getSendSchedule()])
+      .then(([p, s]) => {
+        setPreview(p);
+        setSendSchedule(s);
+      })
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
   }
 
   useEffect(load, []);
 
-  function startEdit() {
+  function startEditWindow() {
     setDraftWindow(preview.windowDays);
     setEditingWindow(true);
   }
@@ -31,8 +61,26 @@ export default function Events() {
     try {
       await api.updateEventsWindow(draftWindow);
       setEditingWindow(false);
-      setSavedFlash(true);
-      setTimeout(() => setSavedFlash(false), 2200);
+      setWindowSavedFlash(true);
+      setTimeout(() => setWindowSavedFlash(false), 2200);
+      load();
+    } catch (err) {
+      setError(err.message);
+    }
+  }
+
+  function startEditSchedule() {
+    setDraftRrule(sendSchedule.rrule);
+    setDraftTime(sendSchedule.time);
+    setEditingSchedule(true);
+  }
+
+  async function saveSchedule() {
+    try {
+      await api.updateSendSchedule({ rrule: draftRrule, time: draftTime });
+      setEditingSchedule(false);
+      setScheduleSavedFlash(true);
+      setTimeout(() => setScheduleSavedFlash(false), 2200);
       load();
     } catch (err) {
       setError(err.message);
@@ -55,15 +103,38 @@ export default function Events() {
       {error && <div className="error-banner">{error}</div>}
 
       <div className="card">
-        <div className="schedule-row">
-          <div className="schedule-icon">
-            <ClockIcon />
+        {!editingSchedule && (
+          <div className="schedule-row">
+            <div className="schedule-icon">
+              <ClockIcon />
+            </div>
+            <div className="schedule-info">
+              <div className="schedule-label">Frequência de envio</div>
+              <div className="schedule-value">{humanizeSendSchedule(sendSchedule.rrule, sendSchedule.time)}</div>
+            </div>
+            <button className="btn-ghost" onClick={startEditSchedule}>Editar frequência</button>
           </div>
-          <div className="schedule-info">
-            <div className="schedule-label">Frequência de envio</div>
-            <div className="schedule-value">Toda semana, sábado às 11:00 (Los Angeles)</div>
+        )}
+
+        {editingSchedule && (
+          <div className="schedule-edit">
+            <RecurrenceBuilder value={draftRrule} onChange={setDraftRrule} allowExceptions={false} />
+            <div className="field">
+              <label>Horário (Los Angeles)</label>
+              <input type="time" value={draftTime} onChange={(e) => setDraftTime(e.target.value)} />
+            </div>
+            <div className="edit-actions">
+              <button className="btn-ghost" onClick={() => setEditingSchedule(false)}>Cancelar</button>
+              <button className="btn-primary" onClick={saveSchedule}>Salvar</button>
+            </div>
           </div>
-        </div>
+        )}
+
+        {scheduleSavedFlash && (
+          <div className="save-flash">
+            <CheckIcon /> Frequência atualizada
+          </div>
+        )}
       </div>
 
       <div className="card">
@@ -76,7 +147,7 @@ export default function Events() {
               <div className="schedule-label">Janela de eventos</div>
               <div className="schedule-value">Próximos {preview?.windowDays ?? 45} dias</div>
             </div>
-            <button className="btn-ghost" onClick={startEdit}>Editar janela</button>
+            <button className="btn-ghost" onClick={startEditWindow}>Editar janela</button>
           </div>
         )}
 
@@ -96,7 +167,7 @@ export default function Events() {
           </div>
         )}
 
-        {savedFlash && (
+        {windowSavedFlash && (
           <div className="save-flash">
             <CheckIcon /> Janela atualizada
           </div>

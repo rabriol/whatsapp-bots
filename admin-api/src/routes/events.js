@@ -98,7 +98,7 @@ function nextRowId(rows) {
 }
 
 const WINDOW_KEY = 'event_window_days';
-const WINDOW_HEADERS = ['key', 'value'];
+const SETTINGS_HEADERS = ['key', 'value'];
 const DEFAULT_WINDOW_DAYS = 45;
 const MIN_WINDOW_DAYS = 1;
 const MAX_WINDOW_DAYS = 180;
@@ -224,12 +224,91 @@ router.put('/window', async (req, res, next) => {
     const rowValues = { key: WINDOW_KEY, value: String(windowDays) };
 
     if (existing) {
-      await updateRow(config.eventsSettingsSheetName, existing.rowNumber, WINDOW_HEADERS, rowValues, config.eventsSheetsId);
+      await updateRow(config.eventsSettingsSheetName, existing.rowNumber, SETTINGS_HEADERS, rowValues, config.eventsSheetsId);
     } else {
-      await appendRow(config.eventsSettingsSheetName, WINDOW_HEADERS, rowValues, config.eventsSheetsId);
+      await appendRow(config.eventsSettingsSheetName, SETTINGS_HEADERS, rowValues, config.eventsSheetsId);
     }
 
     res.json({ windowDays });
+  } catch (err) {
+    next(err);
+  }
+});
+
+const SEND_SCHEDULE_RRULE_KEY = 'weekly_send_rrule';
+const SEND_SCHEDULE_TIME_KEY = 'weekly_send_time';
+const DEFAULT_SEND_RRULE = 'RRULE:FREQ=WEEKLY;BYDAY=SA';
+const DEFAULT_SEND_TIME = '11:00';
+const TIME_RE = /^([01]\d|2[0-3]):[0-5]\d$/;
+
+async function getSendSchedule() {
+  const { rows } = await readSheet(config.eventsSettingsSheetName, config.eventsSheetsId);
+  const rruleRow = rows.find((r) => r.values.key === SEND_SCHEDULE_RRULE_KEY);
+  const timeRow = rows.find((r) => r.values.key === SEND_SCHEDULE_TIME_KEY);
+  return {
+    rrule: (rruleRow?.values.value || '').trim() || DEFAULT_SEND_RRULE,
+    time: (timeRow?.values.value || '').trim() || DEFAULT_SEND_TIME,
+  };
+}
+
+router.get('/send-schedule', async (req, res, next) => {
+  try {
+    if (!config.eventsSheetsId) {
+      return res.status(500).json({ error: 'EVENTS_SHEETS_ID is not configured' });
+    }
+    res.json(await getSendSchedule());
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.put('/send-schedule', async (req, res, next) => {
+  try {
+    if (!config.eventsSheetsId) {
+      return res.status(500).json({ error: 'EVENTS_SHEETS_ID is not configured' });
+    }
+
+    const rrule = String(req.body.rrule || '').trim();
+    const time = String(req.body.time || '').trim();
+
+    if (!rrule) {
+      return res.status(400).json({ error: 'rrule is required' });
+    }
+    // weekly-announcement-bot reads this Settings tab through a public CSV
+    // export parsed by a naive parser that splits on literal newlines before
+    // honoring quoted fields (a known bug, filed but deliberately not fixed
+    // yet). A multi-line RRULE+EXDATE value here would corrupt that parse,
+    // so reject it outright - the send-schedule builder never generates
+    // exceptions for this reason (see RecurrenceBuilder's allowExceptions
+    // prop), but validate here too in case of a direct API call.
+    if (rrule.includes('\n') || rrule.includes('\r')) {
+      return res.status(400).json({ error: 'rrule must be a single line (exceptions/EXDATE are not supported for the send schedule)' });
+    }
+    try {
+      RRule.fromString(rrule);
+    } catch (err) {
+      return res.status(400).json({ error: `invalid rrule: ${err.message}` });
+    }
+    if (!TIME_RE.test(time)) {
+      return res.status(400).json({ error: 'time must be in HH:MM 24h format' });
+    }
+
+    const { rows } = await readSheet(config.eventsSettingsSheetName, config.eventsSheetsId);
+
+    async function upsert(key, value) {
+      const existing = rows.find((r) => r.values.key === key);
+      const rowValues = { key, value };
+      if (existing) {
+        await updateRow(config.eventsSettingsSheetName, existing.rowNumber, SETTINGS_HEADERS, rowValues, config.eventsSheetsId);
+      } else {
+        await appendRow(config.eventsSettingsSheetName, SETTINGS_HEADERS, rowValues, config.eventsSheetsId);
+      }
+    }
+
+    await upsert(SEND_SCHEDULE_RRULE_KEY, rrule);
+    await upsert(SEND_SCHEDULE_TIME_KEY, time);
+
+    res.json({ rrule, time });
   } catch (err) {
     next(err);
   }
