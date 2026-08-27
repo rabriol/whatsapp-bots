@@ -43,56 +43,91 @@ async function fetchSettings() {
 
 /**
  * Parses a CSV string into an array of objects keyed by header row.
- * Handles quoted fields and escaped quotes ("").
  *
  * @param {string} csv
  * @returns {Object[]}
  */
 function parseCSV(csv) {
-  const lines = csv.split('\n').filter(l => l.trim() !== '');
-  if (lines.length < 2) return [];
+  const rows = parseCSVRows(csv);
+  if (rows.length < 2) return [];
 
-  const headers = parseCSVRow(lines[0]);
+  const headers = rows[0].map(h => h.trim());
 
-  const rows = [];
-  for (let i = 1; i < lines.length; i++) {
-    const values = parseCSVRow(lines[i]);
+  const result = [];
+  for (let i = 1; i < rows.length; i++) {
+    const values = rows[i];
     if (values.every(v => v.trim() === '')) continue;
 
     const row = {};
     headers.forEach((h, idx) => {
-      row[h.trim()] = (values[idx] ?? '').trim();
+      row[h] = (values[idx] ?? '').trim();
     });
-    rows.push(row);
+    result.push(row);
   }
-  return rows;
+  return result;
 }
 
 /**
- * Parses a single CSV line respecting quoted fields.
+ * Parses a full CSV document into rows of cells in a single quote-aware
+ * pass, per RFC4180: a comma or newline inside a quoted field is part of
+ * the field's value, not a column/row separator, and "" inside a quoted
+ * field is an escaped literal quote.
  *
- * @param {string} line
- * @returns {string[]}
+ * Splitting into lines before parsing quotes (the previous approach here)
+ * corrupts any row whose cell contains an embedded newline - e.g. a
+ * recurrence_rule storing "RRULE:...\nEXDATE:..." on two lines, which
+ * Google Sheets' CSV export correctly wraps in quotes. That newline would
+ * get treated as ending the row early, silently blanking every column
+ * after it for that row and misdirecting the remainder into a bogus
+ * extra row.
+ *
+ * @param {string} csv
+ * @returns {string[][]}
  */
-function parseCSVRow(line) {
-  const cells = [];
-  let current = '';
+function parseCSVRows(csv) {
+  const rows = [];
+  let row = [];
+  let cell = '';
   let inQuotes = false;
 
-  for (let i = 0; i < line.length; i++) {
-    const ch = line[i];
+  for (let i = 0; i < csv.length; i++) {
+    const ch = csv[i];
+
+    if (inQuotes) {
+      if (ch === '"') {
+        if (csv[i + 1] === '"') { cell += '"'; i++; }
+        else { inQuotes = false; }
+      } else {
+        cell += ch;
+      }
+      continue;
+    }
+
     if (ch === '"') {
-      if (inQuotes && line[i + 1] === '"') { current += '"'; i++; }
-      else { inQuotes = !inQuotes; }
-    } else if (ch === ',' && !inQuotes) {
-      cells.push(current);
-      current = '';
+      inQuotes = true;
+    } else if (ch === ',') {
+      row.push(cell);
+      cell = '';
+    } else if (ch === '\r') {
+      // Skip - a following '\n' (or a lone '\r', unlikely from Sheets)
+      // ends the row on its own.
+    } else if (ch === '\n') {
+      row.push(cell);
+      cell = '';
+      rows.push(row);
+      row = [];
     } else {
-      current += ch;
+      cell += ch;
     }
   }
-  cells.push(current);
-  return cells;
+
+  // The document may or may not end with a trailing newline.
+  if (cell !== '' || row.length > 0) {
+    row.push(cell);
+    rows.push(row);
+  }
+
+  return rows;
 }
 
-module.exports = { fetchSheetRows, fetchSettings, parseCSV, parseCSVRow };
+module.exports = { fetchSheetRows, fetchSettings, parseCSV, parseCSVRows };
