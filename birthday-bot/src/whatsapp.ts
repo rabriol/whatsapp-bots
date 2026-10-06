@@ -1,5 +1,19 @@
 import { config } from "./config";
 
+async function sendText(jid: string, text: string): Promise<void> {
+  const response = await fetch(`${config.gatewayUrl}/send`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ jid, text }),
+    signal: AbortSignal.timeout(10000),
+  });
+
+  if (!response.ok) {
+    const body = await response.text();
+    throw new Error(`Gateway error (${response.status}): ${body}`);
+  }
+}
+
 export async function sendBirthdayMessage(
   groupJid: string,
   names: string[]
@@ -12,17 +26,20 @@ export async function sendBirthdayMessage(
     `📖 "O Senhor te abençoe e te guarde; o Senhor faça resplandecer o seu rosto sobre ti e tenha misericórdia de ti; o Senhor sobre ti levante o seu rosto e te dê a paz." — Números 6:24-26\n\n` +
     `Que este novo ano de vida seja repleto das bênçãos do Senhor! 🙌`;
 
-  const response = await fetch(`${config.gatewayUrl}/send`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ jid: groupJid, text: message }),
-    signal: AbortSignal.timeout(10000),
-  });
+  await sendText(groupJid, message);
+  console.log("Birthday message sent successfully!");
+}
 
-  if (!response.ok) {
-    const body = await response.text();
-    throw new Error(`Gateway error (${response.status}): ${body}`);
+// Never throws: an alert that fails must not replace the error it reports.
+export async function sendAlert(text: string): Promise<void> {
+  if (!config.notificationJid) {
+    console.warn(`NOTIFICATION_JID not set, alert not delivered: ${text}`);
+    return;
   }
 
-  console.log("Birthday message sent successfully!");
+  try {
+    await sendText(config.notificationJid, `⚠️ *birthday-bot*\n\n${text}`);
+  } catch (err) {
+    console.error("Failed to deliver alert:", (err as Error).message);
+  }
 }

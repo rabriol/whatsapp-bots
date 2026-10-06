@@ -12,17 +12,19 @@ export interface Schedule {
   tz: string;
 }
 
-const SCHEDULE_DEFAULTS: Schedule = { hour: 7, minute: 0, tz: "America/Los_Angeles" };
+export const SCHEDULE_DEFAULTS: Schedule = { hour: 7, minute: 0, tz: "America/Los_Angeles" };
 
+// Throws when the sheet cannot be read, so the caller can keep the schedule it
+// already has. Returning the defaults here would silently move the send time
+// whenever Sheets is briefly unreachable.
 export async function getSchedule(): Promise<Schedule> {
   const { googleSheetsId, googleApiKey, settingsSheetName } = config;
   const range = encodeURIComponent(settingsSheetName);
   const url = `https://sheets.googleapis.com/v4/spreadsheets/${googleSheetsId}/values/${range}?key=${googleApiKey}`;
 
-  const response = await fetch(url);
+  const response = await fetch(url, { signal: AbortSignal.timeout(10000) });
   if (!response.ok) {
-    console.warn(`Could not read ${settingsSheetName} sheet (${response.status}), using default schedule.`);
-    return SCHEDULE_DEFAULTS;
+    throw new Error(`Could not read ${settingsSheetName} sheet (${response.status})`);
   }
 
   const data = (await response.json()) as { values?: string[][] };
@@ -69,7 +71,7 @@ async function fetchBirthdays(): Promise<Birthday[]> {
   const range = encodeURIComponent(sheetName);
   const url = `https://sheets.googleapis.com/v4/spreadsheets/${googleSheetsId}/values/${range}?key=${googleApiKey}`;
 
-  const response = await fetch(url);
+  const response = await fetch(url, { signal: AbortSignal.timeout(10000) });
 
   if (!response.ok) {
     const body = await response.text();

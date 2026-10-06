@@ -7,6 +7,7 @@ interface Config {
   settingsSheetName: string;
   whatsappGroupJid: string;
   gatewayUrl: string;
+  notificationJid: string;
 }
 
 function requireEnv(name: string): string {
@@ -24,4 +25,7 @@ export const config: Config = {
   settingsSheetName: process.env.SETTINGS_SHEET_NAME || "Settings",
   whatsappGroupJid: requireEnv("WHATSAPP_GROUP_JID"),
   gatewayUrl: requireEnv("GATEWAY_URL"),
+  // Same group the gateway posts its own health messages to. Optional: without
+  // it the bot still runs, it just has no way to report a failed send.
+  notificationJid: process.env.NOTIFICATION_JID || "",
 };
