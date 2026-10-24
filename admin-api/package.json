@@ -4,13 +4,16 @@
   "description": "Admin UI + REST API for managing announcements and birthday schedule via Google Sheets",
   "main": "src/index.js",
   "scripts": {
-    "start": "node src/index.js"
+    "start": "node src/index.js",
+    "test": "node --test \"test/*.test.js\""
   },
   "dependencies": {
     "dotenv": "^16.4.7",
     "express": "^4.18.2",
     "google-auth-library": "^9.14.2",
     "googleapis": "^144.0.0",
-    "rrule": "^2.8.1"
+    "multer": "^2.5.0",
+    "rrule": "^2.8.1",
+    "sharp": "^0.35.5"
   }
 }
