@@ -1,3 +1,159 @@
 <!doctype html>
 <!-- telao-player -->
-<title>Telão</title>
+<html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Telão</title>
+<style>
+*{box-sizing:border-box}html,body{overflow:hidden}body{margin:0;background:#080f1d;color:#fff;font-family:system-ui,sans-serif}
+main{position:fixed;inset:0}
+.slide{position:absolute;inset:0;cursor:pointer}.slide[hidden]{display:none}
+.slide img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;display:block;pointer-events:none}
+.slide .bg{animation:fade .8s ease-out both}
+.slide .text{opacity:0}
+.slide.show-text .text{animation:fade .8s ease both}
+@keyframes fade{from{opacity:0}to{opacity:1}}
+.paused .slide .bg,.paused .slide .text{animation-play-state:paused}
+@media(prefers-reduced-motion:reduce){.slide .bg,.slide.show-text .text{animation:none;opacity:1}}
+.message{position:fixed;inset:0;display:grid;place-items:center;color:#efcf94;font-size:18px;padding:16px;text-align:center}.message[hidden]{display:none}
+.controls{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);display:flex;flex-wrap:wrap;justify-content:center;gap:8px;max-width:calc(100vw - 16px);width:max-content;transition:opacity .5s;background:#080f1dd9;padding:8px;border-radius:12px}
+.controls.hidden{opacity:0;pointer-events:none}.controls[hidden]{display:none}
+button{color:#fff;background:#ffffff17;border:1px solid #ffffff30;border-radius:7px;padding:10px 16px;font:inherit;cursor:pointer}
+button:hover{background:#ffffff2d}button:disabled{opacity:.4;cursor:default}
+button:focus-visible{outline:2px solid #e7b75c;outline-offset:3px}
+.count{align-self:center;font-size:14px;padding:0 6px;color:#efcf94}
+.status{position:fixed;top:16px;left:16px;background:#080f1de8;padding:10px 14px;border-radius:8px;max-width:90vw}.status:empty{display:none}
+@media(max-width:480px){button{font-size:14px;padding:10px}.controls{bottom:10px}}
+</style></head><body>
+<main aria-label="Apresentação"></main>
+<div class="message" role="status">Carregando…</div>
+<div class="status" role="status"></div>
+<nav class="controls" aria-label="Controles da apresentação" hidden>
+<button id="back">Voltar</button><span class="count" aria-live="polite"></span><button id="next">Avançar</button><button id="pause" aria-pressed="false">Pausar</button><button id="restart">Recomeçar</button><button id="full">Tela cheia</button>
+</nav>
+<script>
+const REVEAL_DELAY = 1000;
+const main = document.querySelector('main'), message = document.querySelector('.message'), status = document.querySelector('.status');
+const controls = document.querySelector('.controls'), count = document.querySelector('.count');
+const back = document.getElementById('back'), next = document.getElementById('next'), pause = document.getElementById('pause');
+let slides = [], step = 0, hideTimer;
+// Pending "show the text" timer; kept as remaining time so Pausar can suspend it.
+let revealTimer = null, revealDue = 0, revealRemaining = 0;
+
+function preload(src) {
+  const img = new Image();
+  img.src = src;
+  return img.decode().catch(() => {});
+}
+
+function reveal() {
+  controls.classList.remove('hidden');
+  clearTimeout(hideTimer);
+  hideTimer = setTimeout(() => { if (!controls.matches(':focus-within')) controls.classList.add('hidden'); }, 3500);
+}
+
+function clearReveal() { clearTimeout(revealTimer); revealTimer = null; revealRemaining = 0; }
+
+function scheduleReveal(ms) {
+  revealRemaining = ms;
+  if (document.body.classList.contains('paused')) return;
+  revealDue = Date.now() + ms;
+  revealTimer = setTimeout(() => { revealTimer = null; revealRemaining = 0; setStep(step + 1); }, ms);
+}
+
+function setStep(value) {
+  clearReveal();
+  step = Math.max(0, Math.min(slides.length * 2 - 1, value));
+  const active = Math.floor(step / 2), show = step % 2 === 1;
+  slides.forEach((el, i) => {
+    el.hidden = i !== active;
+    el.classList.toggle('show-text', i === active && show);
+  });
+  back.disabled = step === 0;
+  next.disabled = step === slides.length * 2 - 1;
+  count.textContent = `${active + 1} / ${slides.length}`;
+  if (!show) scheduleReveal(REVEAL_DELAY);
+}
+
+function togglePause() {
+  const paused = document.body.classList.toggle('paused');
+  pause.textContent = paused ? 'Continuar' : 'Pausar';
+  pause.setAttribute('aria-pressed', String(paused));
+  if (paused && revealTimer) {
+    clearTimeout(revealTimer);
+    revealTimer = null;
+    revealRemaining = Math.max(0, revealDue - Date.now());
+  } else if (!paused && revealRemaining > 0) {
+    scheduleReveal(revealRemaining);
+  }
+  reveal();
+}
+
+function restart() {
+  if (document.body.classList.contains('paused')) togglePause();
+  slides.forEach((el) => el.querySelectorAll('img').forEach((img) => { img.style.animation = 'none'; void img.offsetWidth; img.style.animation = ''; }));
+  setStep(0);
+  reveal();
+}
+
+async function toggleFullscreen() {
+  try {
+    if (document.fullscreenElement) await document.exitFullscreen();
+    else if (document.documentElement.requestFullscreen) await document.documentElement.requestFullscreen();
+    else throw new Error();
+  } catch {
+    status.textContent = 'Use a opção de tela cheia do seu navegador.';
+    setTimeout(() => { status.textContent = ''; }, 5000);
+  }
+  reveal();
+}
+
+function build(list) {
+  slides = list.map((s, i) => {
+    const el = document.createElement('div');
+    el.className = 'slide';
+    el.hidden = true;
+    el.innerHTML = `<img class="bg" alt="Slide ${i + 1}"><img class="text" alt="" aria-hidden="true">`;
+    el.querySelector('.bg').src = s.background;
+    el.querySelector('.text').src = s.text;
+    el.onclick = () => { setStep(step + 1); reveal(); };
+    main.append(el);
+    return el;
+  });
+}
+
+async function start() {
+  let data;
+  try {
+    const res = await fetch('slides.json', { cache: 'no-store' });
+    if (!res.ok) throw new Error();
+    data = await res.json();
+  } catch {
+    message.textContent = 'Não foi possível carregar a apresentação.';
+    return;
+  }
+  const list = Array.isArray(data.slides) ? data.slides : [];
+  if (list.length === 0) { message.textContent = 'Nenhum slide nesta apresentação ainda.'; return; }
+  // Load every image before the first slide so none appears empty on the telão.
+  await Promise.all(list.flatMap((s) => [preload(s.background), preload(s.text)]));
+  build(list);
+  message.hidden = true;
+  controls.hidden = false;
+
+  next.onclick = () => { setStep(step + 1); reveal(); };
+  back.onclick = () => { setStep(step - 1); reveal(); };
+  pause.onclick = togglePause;
+  document.getElementById('restart').onclick = restart;
+  document.getElementById('full').onclick = toggleFullscreen;
+  document.addEventListener('fullscreenchange', () => { document.getElementById('full').textContent = document.fullscreenElement ? 'Sair da tela cheia' : 'Tela cheia'; });
+  ['pointermove', 'pointerdown', 'focusin'].forEach((t) => document.addEventListener(t, reveal));
+  document.addEventListener('keydown', (e) => {
+    reveal();
+    if (e.target.closest?.('button')) return;
+    if (['ArrowRight', 'PageDown', 'Space', 'Enter'].includes(e.code)) { e.preventDefault(); setStep(step + 1); }
+    if (['ArrowLeft', 'PageUp', 'Backspace'].includes(e.code)) { e.preventDefault(); setStep(step - 1); }
+    if (e.key.toLowerCase() === 'f') toggleFullscreen();
+  });
+  setStep(0);
+  reveal();
+}
+
+start();
+</script></body></html>
