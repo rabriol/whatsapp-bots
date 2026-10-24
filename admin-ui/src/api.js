@@ -11,6 +11,19 @@ async function request(path, options = {}) {
   return res.json();
 }
 
+// Multipart uploads can't go through request(): it forces a JSON Content-Type,
+// and the browser must set the multipart boundary itself.
+async function upload(path, method, formData) {
+  const res = await fetch(`/api${path}`, { method, body: formData });
+  const body = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    const err = new Error(body.error || `Request failed: ${res.status}`);
+    err.errors = body.errors || [];
+    throw err;
+  }
+  return body;
+}
+
 export const api = {
   getAnnouncements: () => request('/announcements'),
   createAnnouncement: (data) => request('/announcements', { method: 'POST', body: JSON.stringify(data) }),
@@ -35,4 +48,13 @@ export const api = {
 
   getSendSchedule: () => request('/events/send-schedule'),
   updateSendSchedule: (data) => request('/events/send-schedule', { method: 'PUT', body: JSON.stringify(data) }),
+
+  getSlideFolders: () => request('/slides/folders'),
+  createSlideFolder: (date) => request('/slides/folders', { method: 'POST', body: JSON.stringify({ date }) }),
+  getSlideFolder: (name) => request(`/slides/folders/${name}`),
+  slideImageUrl: (name, path) => `/api/slides/folders/${name}/${path}`,
+  addSlide: (name, formData) => upload(`/slides/folders/${name}/slides`, 'POST', formData),
+  replaceSlideImage: (name, id, role, formData) => upload(`/slides/folders/${name}/slides/${id}/${role}`, 'PUT', formData),
+  deleteSlide: (name, id) => request(`/slides/folders/${name}/slides/${id}`, { method: 'DELETE' }),
+  copySlides: (name, from, slideIds) => request(`/slides/folders/${name}/copy`, { method: 'POST', body: JSON.stringify({ from, slideIds }) }),
 };

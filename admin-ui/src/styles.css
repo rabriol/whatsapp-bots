@@ -770,8 +770,157 @@ td.muted {
   font-size: 13px;
 }
 
+/* Telão: slide folders for announcements.sdarmorangevale.com */
+.telao-layout {
+  display: grid;
+  grid-template-columns: 240px 1fr;
+  gap: 20px;
+  align-items: start;
+}
+.telao-sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.telao-new-folder {
+  justify-content: center;
+}
+.telao-new-folder svg {
+  width: 14px;
+  height: 14px;
+}
+.telao-folders {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.telao-folder {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 2px 8px;
+  text-align: left;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  padding: 9px 11px;
+  color: var(--ink-300);
+  cursor: pointer;
+  font: inherit;
+}
+.telao-folder:hover {
+  background: var(--ink-850);
+  color: var(--ink-100);
+}
+.telao-folder.active {
+  background: var(--ink-900);
+  border-color: var(--ink-700);
+  color: var(--ink-100);
+}
+.telao-folder-name {
+  font-size: 13px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.telao-folder-meta {
+  grid-column: 1;
+  font-size: 11px;
+  color: var(--ink-500);
+}
+.telao-folder-tags {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 4px;
+}
+.telao-main {
+  min-width: 0;
+}
+.telao-main a.btn-ghost {
+  text-decoration: none;
+}
+.telao-main a.btn-ghost:hover {
+  color: var(--ink-100);
+  background: var(--ink-850);
+}
+.telao-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 14px;
+}
+.telao-card {
+  background: var(--ink-850);
+  border: 1px solid var(--ink-800);
+  border-radius: 10px;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.telao-pair {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+.telao-thumb {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  object-fit: contain;
+  border-radius: 6px;
+  background: var(--ink-950);
+  display: block;
+}
+/* Checkerboard so the text image's transparency is visible. */
+.telao-checker {
+  background: repeating-conic-gradient(var(--ink-800) 0 25%, var(--ink-850) 0 50%) 0 0 / 14px 14px;
+}
+.telao-card-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.telao-card-num {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink-500);
+  padding-left: 4px;
+}
+.telao-small {
+  font-size: 11px;
+  padding: 5px 8px;
+}
+.telao-add {
+  align-items: center;
+  justify-content: center;
+  min-height: 150px;
+  border-style: dashed;
+  border-color: var(--ink-700);
+  background: transparent;
+  color: var(--ink-500);
+  cursor: pointer;
+  font: inherit;
+  font-size: 13px;
+}
+.telao-add:hover {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+.telao-add svg {
+  width: 20px;
+  height: 20px;
+}
+.telao-add-sub {
+  font-size: 11px;
+}
+
 /* Mobile */
 @media (max-width: 640px) {
+  .telao-layout {
+    grid-template-columns: 1fr;
+  }
   .topbar {
     height: auto;
     flex-wrap: wrap;

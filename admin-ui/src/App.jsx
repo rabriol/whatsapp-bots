@@ -3,6 +3,7 @@ import Birthdays from './pages/Birthdays';
 import Announcements from './pages/Announcements';
 import Events from './pages/Events';
 import AllEvents from './pages/AllEvents';
+import Telao from './pages/Telao';
 import { ThemeToggle } from './ThemeToggle';
 import { LogoutIcon } from './icons';
 
@@ -13,10 +14,10 @@ const BOT_PAGES = {
 };
 
 export default function App() {
-  const [group, setGroup] = useState('bots'); // 'bots' | 'allEvents'
+  const [group, setGroup] = useState('bots'); // 'bots' | 'allEvents' | 'telao'
   const [botTab, setBotTab] = useState('birthdays');
 
-  const Page = group === 'bots' ? BOT_PAGES[botTab] : AllEvents;
+  const Page = group === 'bots' ? BOT_PAGES[botTab] : group === 'telao' ? Telao : AllEvents;
 
   return (
     <div className="page">
@@ -33,6 +34,12 @@ export default function App() {
             onClick={() => setGroup('allEvents')}
           >
             Todos os Eventos
+          </button>
+          <button
+            className={`nav-item ${group === 'telao' ? 'active' : ''}`}
+            onClick={() => setGroup('telao')}
+          >
+            Telão
           </button>
         </div>
         <div className="topbar-right">
