@@ -5,7 +5,6 @@ const assert = require('node:assert/strict');
 const { inspectImage, validateRole, validatePair, ValidationError } = require('../src/slides/validate');
 const { makePng, makeJpeg } = require('./helpers');
 
-const TRANSPARENT_MSG = 'A imagem de texto precisa ter fundo transparente';
 const SMALL = 1024;
 
 test('text with 50% transparent passes', async () => {
@@ -13,14 +12,14 @@ test('text with 50% transparent passes', async () => {
   assert.deepEqual(validateRole(meta, 'text', SMALL).errors, []);
 });
 
-test('text with 10% transparent fails', async () => {
-  const meta = await inspectImage(await makePng({ width: 1920, height: 1080, transparentRatio: 0.1 }));
-  assert.ok(validateRole(meta, 'text', SMALL).errors.includes(TRANSPARENT_MSG));
+test('opaque png text passes', async () => {
+  const meta = await inspectImage(await makePng({ width: 1920, height: 1080, transparentRatio: 0 }));
+  assert.deepEqual(validateRole(meta, 'text', SMALL), { errors: [], warnings: [] });
 });
 
-test('jpeg as text fails', async () => {
+test('jpeg as text passes', async () => {
   const meta = await inspectImage(await makeJpeg({ width: 1920, height: 1080 }));
-  assert.ok(validateRole(meta, 'text', SMALL).errors.length > 0);
+  assert.deepEqual(validateRole(meta, 'text', SMALL), { errors: [], warnings: [] });
 });
 
 test('jpeg as background passes', async () => {

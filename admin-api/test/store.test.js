@@ -58,16 +58,21 @@ test('addSlide appends in insertion order', async () => {
   assert.deepEqual((await readManifest(dir, name)).slides.map((s) => s.id), ids);
 });
 
-test('addSlide with opaque text is ValidationError and writes nothing', async () => {
+test('addSlide accepts an opaque text image', async () => {
+  const { store } = await setup();
+  const { name } = await store.createFolder('2026-11-01');
+  const p = await pair();
+  p.text = { buffer: await makeJpeg({ width: 1920, height: 1080, color: { r: 250, g: 250, b: 250 } }) };
+  const slide = await store.addSlide(name, p);
+  assert.match(slide.text, /\.jpg$/);
+});
+
+test('addSlide with mismatched proportions is ValidationError and writes nothing', async () => {
   const { dir, store } = await setup();
   const { name } = await store.createFolder('2026-11-01');
   const bad = await pair();
-  bad.text = { buffer: await makePng({ width: 1920, height: 1080, transparentRatio: 0 }) };
-  await assert.rejects(store.addSlide(name, bad), (err) => {
-    assert.ok(err instanceof ValidationError);
-    assert.ok(err.errors.includes('A imagem de texto precisa ter fundo transparente'));
-    return true;
-  });
+  bad.text = { buffer: await makePng({ width: 1920, height: 1200 }) };
+  await assert.rejects(store.addSlide(name, bad), ValidationError);
   assert.deepEqual(await listImg(dir, name), []);
 });
 

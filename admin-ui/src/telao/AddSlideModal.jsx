@@ -59,7 +59,7 @@ export function AddSlideModal({ folder, folders, mode, onClose, onSaved }) {
               <ImageSource label="Fundo" value={background} onChange={setBackground} folders={folders} currentFolder={folder.name} />
             )}
             {replacing !== 'background' && (
-              <ImageSource label="Texto (PNG com fundo transparente)" value={text} onChange={setText} folders={folders} currentFolder={folder.name} />
+              <ImageSource label="Texto" value={text} onChange={setText} folders={folders} currentFolder={folder.name} />
             )}
           </div>
 

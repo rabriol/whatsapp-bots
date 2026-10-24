@@ -62,13 +62,11 @@ test('add slide via references', async () => {
   assert.equal(res.status, 201);
 });
 
-test('opaque text returns 422 with message', async () => {
+test('opaque text is accepted', async () => {
   const { base } = await startServer();
   await postJson(`${base}/folders`, { date: '2026-11-01' });
   const res = await fetch(`${base}/folders/11_01_2026/slides`, { method: 'POST', body: await slideForm({ opaqueText: true }) });
-  assert.equal(res.status, 422);
-  const body = await res.json();
-  assert.ok(body.errors.includes('A imagem de texto precisa ter fundo transparente'));
+  assert.equal(res.status, 201);
 });
 
 test('rejects traversal in folder and file params', async () => {

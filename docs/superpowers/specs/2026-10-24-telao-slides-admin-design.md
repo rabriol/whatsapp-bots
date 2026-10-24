@@ -113,15 +113,15 @@ O template fica no admin-api, por exemplo em `admin-api/src/slides/player.html`.
 
 | Regra | Fundo | Texto | Tipo |
 |---|---|---|---|
-| Formato | PNG, JPG ou WebP | PNG ou WebP | bloqueia |
-| Transparência | n/a | precisa ter canal alfa e pelo menos 20% dos pixels totalmente transparentes | bloqueia, com a mensagem "A imagem de texto precisa ter fundo transparente" |
+| Formato | PNG, JPG ou WebP | PNG, JPG ou WebP | bloqueia |
 | Proporção fundo × texto | precisam ter a mesma proporção (tolerância de 1%) | | bloqueia |
 | Tamanho do arquivo | até 25 MB por imagem | | bloqueia |
 | Resolução | menor que 1920×1080 | | **só avisa**, deixa salvar |
 
-As mesmas regras valem quando a imagem é escolhida de outra pasta. Um fundo da `10_24_2026` funciona como fundo, mas uma imagem dela não passa como texto, porque não é transparente. Nesse caso a mensagem precisa dizer isso com clareza.
+As mesmas regras valem quando a imagem é escolhida de outra pasta.
 
-O limiar de 20% é escolha minha (do Claude), e o builder pode ajustar se um caso real pedir.
+**Atualização (2026-10-24, decisão do Rafael):** a imagem de texto **não** precisa ter fundo transparente. Uma imagem de texto opaca cobre o fundo quando aparece, e o efeito vira uma transição do fundo para o cartaz.
+
 
 ### API (admin-api, novas rotas em `/api/slides`)
 
