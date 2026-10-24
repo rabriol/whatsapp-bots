@@ -7,6 +7,7 @@ const announcementsRouter = require('./routes/announcements');
 const birthdaysRouter = require('./routes/birthdays');
 const birthdayScheduleRouter = require('./routes/birthdaySchedule');
 const eventsRouter = require('./routes/events');
+const { createSlidesRouter } = require('./routes/slides');
 
 const app = express();
 app.use(express.json());
@@ -15,6 +16,7 @@ app.use('/api/announcements', announcementsRouter);
 app.use('/api/birthdays', birthdaysRouter);
 app.use('/api/birthday-schedule', birthdayScheduleRouter);
 app.use('/api/events', eventsRouter);
+app.use('/api/slides', createSlidesRouter(config.slidesDir));
 
 app.get('/api/health', (req, res) => res.json({ ok: true }));
 

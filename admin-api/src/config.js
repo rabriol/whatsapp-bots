@@ -25,4 +25,7 @@ module.exports = {
   // spreadsheet's Settings tab that the birthday schedule uses.
   eventsSettingsSheetName: process.env.EVENTS_SETTINGS_SHEET_NAME || 'Settings',
   credentialsPath: process.env.GOOGLE_APPLICATION_CREDENTIALS || './service-account.json',
+  // The announcements site's slides folder (/opt/announcements/slides on the
+  // VPS), bind-mounted into this container by docker-compose.yml.
+  slidesDir: process.env.SLIDES_DIR || '/app/slides',
 };
