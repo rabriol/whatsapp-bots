@@ -52,6 +52,20 @@ test('pair 1920x1080 + 1920x1200 fails', async () => {
   assert.equal(validatePair(bg, text).errors.length, 1);
 });
 
+for (const [label, make] of [
+  ['truncated png with alpha', () => makePng({ width: 1920, height: 1080, transparentRatio: 0.5 })],
+  ['truncated jpeg', () => makeJpeg({ width: 1920, height: 1080 })],
+]) {
+  test(`${label} is rejected as corrupted`, async () => {
+    const full = await make();
+    await assert.rejects(inspectImage(full.subarray(0, Math.floor(full.length / 2))), (err) => {
+      assert.ok(err instanceof ValidationError);
+      assert.deepEqual(err.errors, ['O arquivo está corrompido ou incompleto.']);
+      return true;
+    });
+  });
+}
+
 test('non-image buffer is rejected with message', async () => {
   await assert.rejects(inspectImage(Buffer.from('%PDF-1.4')), (err) => {
     assert.ok(err instanceof ValidationError);

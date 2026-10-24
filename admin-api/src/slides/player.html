@@ -37,10 +37,13 @@ let slides = [], step = 0, hideTimer;
 // Pending "show the text" timer; kept as remaining time so Pausar can suspend it.
 let revealTimer = null, revealDue = 0, revealRemaining = 0;
 
+// load/error rather than decode(): decode() can stay pending while the tab is in the background.
 function preload(src) {
-  const img = new Image();
-  img.src = src;
-  return img.decode().catch(() => {});
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = img.onerror = resolve;
+    img.src = src;
+  });
 }
 
 function reveal() {
@@ -70,6 +73,13 @@ function setStep(value) {
   next.disabled = step === slides.length * 2 - 1;
   count.textContent = `${active + 1} / ${slides.length}`;
   if (!show) scheduleReveal(REVEAL_DELAY);
+}
+
+// Moving to another step always resumes: a paused fade would leave the new slide invisible.
+function go(value) {
+  if (document.body.classList.contains('paused')) togglePause();
+  setStep(value);
+  reveal();
 }
 
 function togglePause() {
@@ -113,7 +123,7 @@ function build(list) {
     el.innerHTML = `<img class="bg" alt="Slide ${i + 1}"><img class="text" alt="" aria-hidden="true">`;
     el.querySelector('.bg').src = s.background;
     el.querySelector('.text').src = s.text;
-    el.onclick = () => { setStep(step + 1); reveal(); };
+    el.onclick = () => go(step + 1);
     main.append(el);
     return el;
   });
@@ -137,8 +147,8 @@ async function start() {
   message.hidden = true;
   controls.hidden = false;
 
-  next.onclick = () => { setStep(step + 1); reveal(); };
-  back.onclick = () => { setStep(step - 1); reveal(); };
+  next.onclick = () => go(step + 1);
+  back.onclick = () => go(step - 1);
   pause.onclick = togglePause;
   document.getElementById('restart').onclick = restart;
   document.getElementById('full').onclick = toggleFullscreen;
@@ -147,8 +157,8 @@ async function start() {
   document.addEventListener('keydown', (e) => {
     reveal();
     if (e.target.closest?.('button')) return;
-    if (['ArrowRight', 'PageDown', 'Space', 'Enter'].includes(e.code)) { e.preventDefault(); setStep(step + 1); }
-    if (['ArrowLeft', 'PageUp', 'Backspace'].includes(e.code)) { e.preventDefault(); setStep(step - 1); }
+    if (['ArrowRight', 'PageDown', 'Space', 'Enter'].includes(e.code)) { e.preventDefault(); go(step + 1); }
+    if (['ArrowLeft', 'PageUp', 'Backspace'].includes(e.code)) { e.preventDefault(); go(step - 1); }
     if (e.key.toLowerCase() === 'f') toggleFullscreen();
   });
   setStep(0);

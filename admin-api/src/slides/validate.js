@@ -31,12 +31,22 @@ async function inspectImage(buffer) {
     throw new ValidationError(['Formato de imagem não suportado. Use PNG, JPG ou WebP.']);
   }
 
+  // Decode every pixel so a truncated file is caught here instead of being
+  // saved and shown half-grey on the telão (metadata() alone accepts it).
+  let pixels;
+  try {
+    pixels = await sharp(buffer).raw().toBuffer({ resolveWithObject: true });
+  } catch {
+    throw new ValidationError(['O arquivo está corrompido ou incompleto.']);
+  }
+
   let transparentRatio = 0;
   if (meta.hasAlpha) {
-    const alpha = await sharp(buffer).ensureAlpha().extractChannel('alpha').raw().toBuffer();
+    const { data, info } = pixels;
+    const alphaIndex = info.channels - 1;
     let zeros = 0;
-    for (let i = 0; i < alpha.length; i++) if (alpha[i] === 0) zeros++;
-    transparentRatio = zeros / alpha.length;
+    for (let i = alphaIndex; i < data.length; i += info.channels) if (data[i] === 0) zeros++;
+    transparentRatio = zeros / (info.width * info.height);
   }
 
   return {
