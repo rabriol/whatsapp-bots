@@ -916,6 +916,62 @@ td.muted {
   font-size: 11px;
 }
 
+.telao-warning {
+  background: rgba(252, 211, 77, 0.1);
+  border: 1px solid rgba(252, 211, 77, 0.35);
+  color: #d4a20f;
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 13px;
+}
+.telao-source select,
+.telao-source input[type="file"] {
+  font: inherit;
+  font-size: 13px;
+  color: var(--ink-100);
+}
+.telao-pick-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+  gap: 6px;
+  max-height: 220px;
+  overflow-y: auto;
+}
+.telao-pick {
+  padding: 2px;
+  border: 2px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+  cursor: pointer;
+}
+.telao-pick.active,
+.telao-copy.active {
+  border-color: var(--accent);
+}
+.telao-copy {
+  cursor: pointer;
+}
+.telao-preview {
+  position: relative;
+  aspect-ratio: 16 / 9;
+  background: #080f1d;
+  border-radius: 8px;
+  overflow: hidden;
+  display: grid;
+  place-items: center;
+}
+.telao-preview img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+.telao-preview-empty {
+  font-size: 12px;
+  color: var(--ink-500);
+}
+
 /* Mobile */
 @media (max-width: 640px) {
   .telao-layout {

@@ -3,6 +3,8 @@ import { api } from '../api';
 import { FolderList } from '../telao/FolderList';
 import { SlideGrid } from '../telao/SlideGrid';
 import { NewFolderModal } from '../telao/NewFolderModal';
+import { AddSlideModal } from '../telao/AddSlideModal';
+import { CopySlidesModal } from '../telao/CopySlidesModal';
 
 const SITE_URL = 'https://announcements.sdarmorangevale.com';
 
@@ -13,6 +15,9 @@ export default function Telao() {
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true);
   const [newFolderOpen, setNewFolderOpen] = useState(false);
+  const [slideModal, setSlideModal] = useState(null); // 'add' | { replace, slide }
+  const [copyOpen, setCopyOpen] = useState(false);
+  const [warnings, setWarnings] = useState([]);
 
   async function loadFolders(select) {
     try {
@@ -57,12 +62,17 @@ export default function Telao() {
       </div>
 
       {error && <div className="error-banner">{error}</div>}
+      {warnings.length > 0 && (
+        <div className="telao-warning">
+          {warnings.map((w) => <div key={w}>{w}</div>)}
+        </div>
+      )}
 
       <div className="telao-layout">
         <FolderList
           folders={folders}
           selected={selected}
-          onSelect={(name) => { setError(null); setSelected(name); }}
+          onSelect={(name) => { setError(null); setWarnings([]); setSelected(name); }}
           onNewFolder={() => setNewFolderOpen(true)}
         />
 
@@ -75,7 +85,7 @@ export default function Telao() {
                 <h2>{folder.name}</h2>
                 <div className="row-actions">
                   {folder.editable && (
-                    <button className="btn-ghost" disabled>Copiar slides de outra pasta</button>
+                    <button className="btn-ghost" onClick={() => setCopyOpen(true)}>Copiar slides de outra pasta</button>
                   )}
                   <a className="btn-ghost" href={`${SITE_URL}/${folder.name}/`} target="_blank" rel="noreferrer">
                     Abrir no site ↗
@@ -88,14 +98,33 @@ export default function Telao() {
               <SlideGrid
                 folder={folder}
                 onChanged={reload}
-                onAddSlide={() => {}}
-                onReplace={() => {}}
+                onAddSlide={() => setSlideModal('add')}
+                onReplace={(slide, role) => setSlideModal({ replace: role, slide })}
                 onError={setError}
               />
             </>
           )}
         </section>
       </div>
+
+      {slideModal && folder && (
+        <AddSlideModal
+          folder={folder}
+          folders={folders}
+          mode={slideModal}
+          onClose={() => setSlideModal(null)}
+          onSaved={(w) => { setWarnings(w); reload(); }}
+        />
+      )}
+
+      {copyOpen && folder && (
+        <CopySlidesModal
+          folder={folder}
+          folders={folders}
+          onClose={() => setCopyOpen(false)}
+          onCopied={() => { setWarnings([]); reload(); }}
+        />
+      )}
 
       {newFolderOpen && (
         <NewFolderModal
