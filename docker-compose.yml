@@ -58,6 +58,8 @@ services:
     env_file: ./admin-api/.env
     volumes:
       - ./admin-api/service-account.json:/app/admin-api/service-account.json:ro
+      # Slides of announcements.sdarmorangevale.com, managed by the Telão tab.
+      - ${SLIDES_HOST_DIR:-/opt/announcements/slides}:/app/slides
     networks:
       - whatsapp-net
     restart: unless-stopped
