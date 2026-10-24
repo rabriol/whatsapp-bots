@@ -251,6 +251,20 @@ function createStore(slidesDir) {
     });
   }
 
+  // ids must be exactly the folder's current slide ids in the new order; anything
+  // else means the admin page is out of date (another tab changed the folder).
+  function reorderSlides(name, ids) {
+    return withLock(name, async () => {
+      const manifest = await requireEditable(name);
+      const byId = new Map(manifest.slides.map((s) => [s.id, s]));
+      const valid = Array.isArray(ids) && ids.length === byId.size && new Set(ids).size === ids.length && ids.every((id) => byId.has(id));
+      if (!valid) throw new ConflictError('A pasta mudou desde que a página foi aberta. Recarregue e tente de novo.');
+      manifest.slides = ids.map((id) => byId.get(id));
+      await save(name, manifest);
+      return manifest.slides;
+    });
+  }
+
   function copySlides(name, from, slideIds) {
     return withLock(name, async () => {
       const manifest = await requireEditable(name);
@@ -275,7 +289,7 @@ function createStore(slidesDir) {
     });
   }
 
-  return { listFolders, liveFolderName, getFolder, createFolder, imagePath, addSlide, replaceImage, removeSlide, copySlides };
+  return { listFolders, liveFolderName, getFolder, createFolder, imagePath, addSlide, replaceImage, removeSlide, reorderSlides, copySlides };
 }
 
 module.exports = { createStore, NotFoundError, ConflictError, InvalidNameError, ValidationError };

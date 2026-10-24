@@ -183,3 +183,31 @@ test('liveFolderName skips future and empty', async () => {
   const live = (await store.listFolders('20261107')).filter((f) => f.live).map((f) => f.name);
   assert.deepEqual(live, ['11_07_2026']);
 });
+
+test('reorderSlides saves the new order', async () => {
+  const { dir, store } = await setup();
+  const { name } = await store.createFolder('2026-11-01');
+  const ids = [];
+  for (const seed of [1, 2, 3]) ids.push((await store.addSlide(name, await pair(seed))).id);
+  const order = [ids[2], ids[0], ids[1]];
+  const slides = await store.reorderSlides(name, order);
+  assert.deepEqual(slides.map((s) => s.id), order);
+  assert.deepEqual((await readManifest(dir, name)).slides.map((s) => s.id), order);
+});
+
+test('reorderSlides with a stale or partial list is ConflictError', async () => {
+  const { dir, store } = await setup();
+  const { name } = await store.createFolder('2026-11-01');
+  const a = await store.addSlide(name, await pair(1));
+  const b = await store.addSlide(name, await pair(2));
+  await assert.rejects(store.reorderSlides(name, [b.id]), ConflictError);
+  await assert.rejects(store.reorderSlides(name, [b.id, a.id, 'ghost']), ConflictError);
+  await assert.rejects(store.reorderSlides(name, [a.id, a.id]), ConflictError);
+  assert.deepEqual((await readManifest(dir, name)).slides.map((s) => s.id), [a.id, b.id]);
+});
+
+test('reorderSlides on a read-only folder is ConflictError', async () => {
+  const { dir, store } = await setup();
+  const ro = await makeReadOnly(dir);
+  await assert.rejects(store.reorderSlides(ro.name, []), ConflictError);
+});

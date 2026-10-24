@@ -104,3 +104,15 @@ test('oversized upload is 422', async () => {
   assert.equal(res.status, 422);
   assert.match((await res.json()).error, /25 MB/);
 });
+
+test('reorder slides via PUT /order', async () => {
+  const { base } = await startServer();
+  await postJson(`${base}/folders`, { date: '2026-11-01' });
+  for (let i = 0; i < 2; i++) await fetch(`${base}/folders/11_01_2026/slides`, { method: 'POST', body: await slideForm() });
+  const ids = (await (await fetch(`${base}/folders/11_01_2026`)).json()).slides.map((s) => s.id);
+  const put = (body) => fetch(`${base}/folders/11_01_2026/order`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+  const res = await put({ ids: [ids[1], ids[0]] });
+  assert.equal(res.status, 200);
+  assert.deepEqual((await res.json()).map((s) => s.id), [ids[1], ids[0]]);
+  assert.equal((await put({ ids: [ids[0]] })).status, 409);
+});

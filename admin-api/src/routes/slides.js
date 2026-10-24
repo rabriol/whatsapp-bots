@@ -85,6 +85,10 @@ function createSlidesRouter(slidesDir) {
     res.status(204).end();
   }));
 
+  router.put('/folders/:name/order', ...handle(null, async (req, res) => {
+    res.json(await store.reorderSlides(req.params.name, req.body && req.body.ids));
+  }));
+
   router.post('/folders/:name/copy', ...handle(null, async (req, res) => {
     const { from, slideIds } = req.body || {};
     res.status(201).json(await store.copySlides(req.params.name, from, slideIds));

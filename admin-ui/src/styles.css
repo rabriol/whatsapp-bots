@@ -859,6 +859,19 @@ td.muted {
   flex-direction: column;
   gap: 8px;
 }
+.telao-draggable {
+  cursor: grab;
+}
+.telao-dragging {
+  opacity: 0.4;
+}
+/* Accent bar on the side where the dragged slide will land. */
+.telao-drop-before {
+  box-shadow: -4px 0 0 var(--accent);
+}
+.telao-drop-after {
+  box-shadow: 4px 0 0 var(--accent);
+}
 .telao-pair {
   display: grid;
   grid-template-columns: 1fr 1fr;
