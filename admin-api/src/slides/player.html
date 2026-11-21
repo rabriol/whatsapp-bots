@@ -26,7 +26,7 @@ button:focus-visible{outline:2px solid #e7b75c;outline-offset:3px}
 <div class="message" role="status">Carregando…</div>
 <div class="status" role="status"></div>
 <nav class="controls" aria-label="Controles da apresentação" hidden>
-<button id="back">Voltar</button><span class="count" aria-live="polite"></span><button id="next">Avançar</button><button id="pause" aria-pressed="false">Pausar</button><button id="restart">Recomeçar</button><button id="full">Tela cheia</button><button id="dl-one" data-dl>Baixar slide (MOV)</button>
+<button id="back">Voltar</button><span class="count" aria-live="polite"></span><button id="next">Avançar</button><button id="pause" aria-pressed="false">Pausar</button><button id="restart">Recomeçar</button><button id="full">Tela cheia</button><button id="dl-one" data-dl>Baixar slide (MOV)</button><button id="dl-all" data-dl>Baixar todos (ZIP)</button>
 </nav>
 <script>
 const REVEAL_DELAY = 1000;
@@ -154,6 +154,7 @@ async function start() {
   document.getElementById('restart').onclick = restart;
   document.getElementById('full').onclick = toggleFullscreen;
   document.getElementById('dl-one').onclick = downloadOne;
+  document.getElementById('dl-all').onclick = downloadAll;
   document.addEventListener('fullscreenchange', () => { document.getElementById('full').textContent = document.fullscreenElement ? 'Sair da tela cheia' : 'Tela cheia'; });
   ['pointermove', 'pointerdown', 'focusin'].forEach((t) => document.addEventListener(t, reveal));
   document.addEventListener('keydown', (e) => {
@@ -171,8 +172,8 @@ async function start() {
 let exportKit = null;
 // Memoised so every click shares one kit, and with it one lock against overlapping jobs.
 function loadExportKit() {
-  exportKit ||= Promise.all([import('./export/exporter.js'), import('./export/frames.js'), import('./export/mediabunny.js')])
-    .then(([exporter, frames, mb]) => ({ exporter, frames, mb, exclusive: exporter.createExclusive() }))
+  exportKit ||= Promise.all([import('./export/exporter.js'), import('./export/frames.js'), import('./export/mediabunny.js'), import('./export/fflate.js')])
+    .then(([exporter, frames, mb, fflate]) => ({ exporter, frames, mb, fflate, exclusive: exporter.createExclusive() }))
     .catch((err) => { exportKit = null; throw err; });
   return exportKit;
 }
@@ -227,6 +228,19 @@ function downloadOne() {
     status.textContent = 'Gerando…';
     const data = await exporter.renderMov({ mb, loadImage, slide: manifestSlides[index], baseUrl: location.href });
     saveFile(new Blob([data], { type: 'video/quicktime' }), frames.movFileName(index, manifestSlides.length));
+  });
+}
+
+function downloadAll() {
+  return runExport(async ({ exporter, frames, mb, fflate }) => {
+    const zip = await exporter.exportFolder({
+      render: (slide) => exporter.renderMov({ mb, loadImage, slide, baseUrl: location.href }),
+      fflate,
+      slides: manifestSlides,
+      folder: frames.folderFromPath(location.pathname) ?? 'slides',
+      onProgress: (current, total) => { status.textContent = `Gerando ${current} / ${total}…`; },
+    });
+    saveFile(new Blob([zip.data], { type: 'application/zip' }), zip.name);
   });
 }
 

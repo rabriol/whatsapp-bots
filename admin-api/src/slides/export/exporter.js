@@ -2,7 +2,9 @@
 // image loader are passed in, so the player controls what gets loaded and the tests can
 // run the logic without a browser.
 
-import { WIDTH, HEIGHT, FPS, BACKDROP, opacityAt, frameCount, frameTimestamp, containRect } from './frames.js';
+import {
+  WIDTH, HEIGHT, FPS, BACKDROP, opacityAt, frameCount, frameTimestamp, containRect, movFileName, zipFileName,
+} from './frames.js';
 
 // True only if this browser can encode H.264 at 1920x1080 through WebCodecs.
 export async function isExportSupported(mb, env = globalThis) {
@@ -65,4 +67,32 @@ export async function renderMov({ mb, loadImage, slide, baseUrl }) {
     background.close?.();
     text.close?.();
   }
+}
+
+export class ExportError extends Error {
+  constructor(slideNumber, cause) {
+    super(`Não foi possível gerar o slide ${slideNumber}.`, { cause });
+    this.slideNumber = slideNumber;
+  }
+}
+
+// MOVs are already compressed, so the zip stores them as they are (level 0).
+export function zipMovs(fflate, files) {
+  return fflate.zipSync(Object.fromEntries(files.map(({ name, data }) => [name, data])), { level: 0 });
+}
+
+// Renders every slide in order, one at a time, and returns the zip. `onProgress(current, total)`
+// fires before each slide (current starts at 1). If any slide fails nothing is returned.
+export async function exportFolder({ render, fflate, slides, folder, onProgress }) {
+  if (slides.length === 0) throw new Error('Nenhum slide para exportar.');
+  const files = [];
+  for (let i = 0; i < slides.length; i++) {
+    onProgress(i + 1, slides.length);
+    try {
+      files.push({ name: movFileName(i, slides.length), data: await render(slides[i]) });
+    } catch (err) {
+      throw new ExportError(i + 1, err);
+    }
+  }
+  return { name: zipFileName(folder), data: zipMovs(fflate, files) };
 }

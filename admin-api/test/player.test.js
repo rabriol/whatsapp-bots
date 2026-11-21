@@ -30,3 +30,7 @@ test('player loads export modules only from its own ./export/ folder', () => {
   for (const target of targets) assert.ok(target.startsWith('./export/'), `unexpected import ${target}`);
   assert.ok(!/import\(\s*['"]https?:/.test(html));
 });
+
+test('player has a download-all ZIP button', () => {
+  assert.ok(html.includes('id="dl-all"'));
+});
