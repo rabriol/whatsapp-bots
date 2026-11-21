@@ -211,3 +211,29 @@ test('reorderSlides on a read-only folder is ConflictError', async () => {
   const ro = await makeReadOnly(dir);
   await assert.rejects(store.reorderSlides(ro.name, []), ConflictError);
 });
+
+const EXPORT_FILES = ['frames.js', 'mediabunny.js', 'fflate.js'];
+
+test('createFolder copies the MOV export modules next to the player', async () => {
+  const { dir, store } = await setup();
+  await store.createFolder('2026-11-01');
+  for (const file of EXPORT_FILES) {
+    const stat = await fs.stat(path.join(dir, '11_01_2026', 'export', file));
+    assert.ok(stat.size > 0, `${file} is empty`);
+  }
+});
+
+test('saving a folder restores missing export modules', async () => {
+  const { dir, store } = await setup();
+  await store.createFolder('2026-11-01');
+  await fs.rm(path.join(dir, '11_01_2026', 'export', 'frames.js'));
+  await store.addSlide('11_01_2026', await pair());
+  await fs.access(path.join(dir, '11_01_2026', 'export', 'frames.js'));
+});
+
+test('hand-made folders never get an export directory', async () => {
+  const { dir, store } = await setup();
+  const ro = await makeReadOnly(dir);
+  await assert.rejects(store.addSlide(ro.name, await pair()), ConflictError);
+  await assert.rejects(fs.access(path.join(dir, ro.name, 'export')));
+});
