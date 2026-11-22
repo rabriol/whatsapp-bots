@@ -26,7 +26,7 @@ button:focus-visible{outline:2px solid #e7b75c;outline-offset:3px}
 <div class="message" role="status">Carregando…</div>
 <div class="status" role="status"></div>
 <nav class="controls" aria-label="Controles da apresentação" hidden>
-<button id="back">Voltar</button><span class="count" aria-live="polite"></span><button id="next">Avançar</button><button id="pause" aria-pressed="false">Pausar</button><button id="restart">Recomeçar</button><button id="full">Tela cheia</button><button id="dl-one" data-dl>Baixar slide (MOV)</button><button id="dl-all" data-dl>Baixar todos (ZIP)</button>
+<button id="back">Voltar</button><span class="count" aria-live="polite"></span><button id="next">Avançar</button><button id="pause" aria-pressed="false">Pausar</button><button id="restart">Recomeçar</button><button id="full">Tela cheia</button><button id="dl-all" data-dl>Baixar todos slides (MOV)</button>
 </nav>
 <script>
 const REVEAL_DELAY = 1000;
@@ -153,7 +153,6 @@ async function start() {
   pause.onclick = togglePause;
   document.getElementById('restart').onclick = restart;
   document.getElementById('full').onclick = toggleFullscreen;
-  document.getElementById('dl-one').onclick = downloadOne;
   document.getElementById('dl-all').onclick = downloadAll;
   document.addEventListener('fullscreenchange', () => { document.getElementById('full').textContent = document.fullscreenElement ? 'Sair da tela cheia' : 'Tela cheia'; });
   ['pointermove', 'pointerdown', 'focusin'].forEach((t) => document.addEventListener(t, reveal));
@@ -221,20 +220,6 @@ async function runExport(job) {
   } catch (err) {
     status.textContent = err.message || 'Não foi possível gerar o vídeo.';
   }
-}
-
-function downloadOne() {
-  const clickedStep = step;
-  return runExport(async ({ exporter, frames, mb }) => {
-    const index = frames.activeSlideIndex(clickedStep);
-    status.textContent = 'Gerando…';
-    const data = await exporter.renderSlide(
-      (slide) => exporter.renderMov({ mb, loadImage, slide, baseUrl: location.href }),
-      manifestSlides[index],
-      index,
-    );
-    saveFile(new Blob([data], { type: 'video/quicktime' }), frames.movFileName(index, manifestSlides.length));
-  });
 }
 
 function downloadAll() {

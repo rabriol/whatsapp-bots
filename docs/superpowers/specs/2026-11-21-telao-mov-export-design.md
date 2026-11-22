@@ -13,6 +13,8 @@ O Rafael usa o ProPresenter no culto e quer levar os anúncios do dia para lá s
 - O MOV reproduz a animação do player: o fundo entra, 1 s depois o texto surge, e o vídeo termina em cerca de 2 s.
 - Tudo acontece no navegador de quem baixa, no momento do clique.
 
+**Atualização (2026-11-22, decisão do Rafael):** o botão de baixar um slide sozinho foi removido. Fica só um botão, **Baixar todos slides (MOV)**, que continua baixando o ZIP com um MOV por slide.
+
 ## Fora do escopo
 
 - Nenhuma mudança de comportamento no servidor, sem `ffmpeg` no Docker, sem MOVs guardados em disco.

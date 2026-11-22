@@ -62,6 +62,3 @@ export function folderFromPath(pathname) {
   const match = /^\/(\d{2}_\d{2}_\d{4})(?:\/|$)/.exec(pathname);
   return match ? match[1] : null;
 }
-
-// The player has two steps per slide (background, then text).
-export const activeSlideIndex = (step) => Math.floor(step / 2);
