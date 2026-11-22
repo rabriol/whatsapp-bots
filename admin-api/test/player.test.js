@@ -20,8 +20,9 @@ test('player has no external dependencies', () => {
   assert.ok(!/<link/i.test(html));
 });
 
-test('player has a single-slide MOV download button', () => {
-  assert.ok(html.includes('id="dl-one"'));
+test('player has no single-slide download button', () => {
+  assert.ok(!html.includes('id="dl-one"'));
+  assert.ok(!html.includes('Baixar slide (MOV)'));
 });
 
 test('player loads export modules only from its own ./export/ folder', () => {
@@ -31,12 +32,10 @@ test('player loads export modules only from its own ./export/ folder', () => {
   assert.ok(!/import\(\s*['"]https?:/.test(html));
 });
 
-test('player has a download-all ZIP button', () => {
+test('player has one download button labelled "Baixar todos slides (MOV)"', () => {
   assert.ok(html.includes('id="dl-all"'));
-});
-
-test('single-slide download reports failures through renderSlide', () => {
-  assert.ok(html.includes('exporter.renderSlide('));
+  assert.ok(html.includes('>Baixar todos slides (MOV)</button>'));
+  assert.ok(!html.includes('Baixar todos (ZIP)'));
 });
 
 test('player script avoids ES2021 logical assignment so older browsers still play the show', () => {

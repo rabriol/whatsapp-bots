@@ -76,11 +76,3 @@ test('folderFromPath reads the mm_dd_yyyy folder from the page path', async () =
   assert.equal(f.folderFromPath('/'), null);
   assert.equal(f.folderFromPath('/abc/'), null);
 });
-
-test('activeSlideIndex maps the two-step player position to a slide', async () => {
-  const f = await load();
-  assert.equal(f.activeSlideIndex(0), 0);
-  assert.equal(f.activeSlideIndex(1), 0);
-  assert.equal(f.activeSlideIndex(2), 1);
-  assert.equal(f.activeSlideIndex(5), 2);
-});
