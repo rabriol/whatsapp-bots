@@ -8,8 +8,7 @@ const MAX_BYTES = 25 * 1024 * 1024;
 
 // Slides for announcements.sdarmorangevale.com, stored in the folder the
 // announcements nginx container serves. Takes the directory so tests can use a temp one.
-function createSlidesRouter(slidesDir) {
-  const store = createStore(slidesDir);
+function createSlidesRouter(slidesDir, store = createStore(slidesDir)) {
   const router = express.Router();
   const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: MAX_BYTES } });
 
@@ -62,7 +61,12 @@ function createSlidesRouter(slidesDir) {
     res.json(await store.getFolder(req.params.name));
   }));
 
-  router.get('/folders/:name/img/:file', ...handle(null, async (req, res) => {
+  router.delete('/folders/:name', ...handle(null, async (req, res) => {
+    await store.removeFolder(req.params.name);
+    res.status(204).end();
+  }));
+
+  router.get('/folders/:name/img/:file',...handle(null, async (req, res) => {
     const file = await store.imagePath(req.params.name, req.params.file);
     res.set('Cache-Control', 'private, max-age=300');
     res.sendFile(file);

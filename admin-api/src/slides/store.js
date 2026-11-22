@@ -260,6 +260,37 @@ function createStore(slidesDir) {
     });
   }
 
+  // Deletes a Telão folder completely: images, slides.json, player and export modules.
+  // Hand-made folders (no slides.json) are refused, like every other write to them.
+  function removeFolder(name) {
+    return withLock(name, async () => {
+      await requireEditable(name);
+      await fs.rm(folderDir(name), { recursive: true });
+    });
+  }
+
+  // Rewrites the player and export modules of every Telão folder (those with a slides.json),
+  // so folders last saved by an older version get new features without anyone saving them.
+  // Images and slides.json are not touched, nor are hand-made folders. One folder failing
+  // does not stop the others.
+  async function refreshPlayers() {
+    const refreshed = [];
+    const failed = [];
+    for (const name of await listFolderNames()) {
+      try {
+        const done = await withLock(name, async () => {
+          if (!(await readManifest(name))) return false;
+          await writePlayer(name);
+          return true;
+        });
+        if (done) refreshed.push(name);
+      } catch (err) {
+        failed.push({ name, error: err.message });
+      }
+    }
+    return { refreshed, failed };
+  }
+
   // ids must be exactly the folder's current slide ids in the new order; anything
   // else means the admin page is out of date (another tab changed the folder).
   function reorderSlides(name, ids) {
@@ -298,7 +329,7 @@ function createStore(slidesDir) {
     });
   }
 
-  return { listFolders, liveFolderName, getFolder, createFolder, imagePath, addSlide, replaceImage, removeSlide, reorderSlides, copySlides };
+  return { listFolders, liveFolderName, getFolder, createFolder, imagePath, addSlide, replaceImage, removeSlide, removeFolder, refreshPlayers, reorderSlides, copySlides };
 }
 
 module.exports = { createStore, NotFoundError, ConflictError, InvalidNameError, ValidationError };
