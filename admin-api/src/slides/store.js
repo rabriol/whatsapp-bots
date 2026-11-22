@@ -25,8 +25,9 @@ function assertFileName(file) {
 
 const exists = (p) => fs.access(p).then(() => true, () => false);
 
-// A folder is editable only if it has a slides.json; hand-made folders like
-// 10_24_2026 have none and must never be written to.
+// A Telão folder is a directory named mm_dd_yyyy that has a slides.json. Any other directory
+// (for example an old hand-made presentation left on disk) is not ours: the store ignores it
+// and never writes to it.
 function createStore(slidesDir) {
   const queues = new Map();
   const folderDir = (name) => path.join(slidesDir, name);
@@ -44,20 +45,16 @@ function createStore(slidesDir) {
     try {
       return JSON.parse(await fs.readFile(path.join(folderDir(name), MANIFEST), 'utf8'));
     } catch (err) {
-      if (err.code === 'ENOENT') return null;
+      if (err.code === 'ENOENT' || err.code === 'ENOTDIR') return null;
       throw err;
     }
   }
 
+  // Returns the folder's manifest; NotFoundError if it is not a Telão folder.
   async function requireFolder(name) {
     assertFolderName(name);
-    if (!(await exists(folderDir(name)))) throw new NotFoundError(`Pasta não encontrada: ${name}`);
-  }
-
-  async function requireEditable(name) {
-    await requireFolder(name);
     const manifest = await readManifest(name);
-    if (!manifest) throw new ConflictError(`A pasta ${name} é somente leitura.`);
+    if (!manifest) throw new NotFoundError(`Pasta não encontrada: ${name}`);
     return manifest;
   }
 
@@ -136,18 +133,11 @@ function createStore(slidesDir) {
       if (err.code === 'ENOENT') return [];
       throw err;
     }
-    return entries
-      .filter((e) => e.isDirectory() && FOLDER_RE.test(e.name))
-      .map((e) => e.name)
+    const candidates = entries.filter((e) => e.isDirectory() && FOLDER_RE.test(e.name)).map((e) => e.name);
+    const isTelao = await Promise.all(candidates.map((name) => exists(path.join(folderDir(name), MANIFEST))));
+    return candidates
+      .filter((name, i) => isTelao[i])
       .sort((a, b) => folderDateKey(b).localeCompare(folderDateKey(a)));
-  }
-
-  async function countImages(name) {
-    try {
-      return (await fs.readdir(path.join(folderDir(name), 'img'))).filter((f) => FILE_RE.test(f)).length;
-    } catch {
-      return 0;
-    }
   }
 
   // Same rule as the site's home page: newest date up to today that has content.
@@ -155,7 +145,7 @@ function createStore(slidesDir) {
     for (const name of await listFolderNames()) {
       if (folderDateKey(name) > todayKey) continue;
       const manifest = await readManifest(name);
-      if (!manifest || manifest.slides.length > 0) return name;
+      if (manifest && manifest.slides.length > 0) return name;
     }
     return null;
   }
@@ -165,22 +155,14 @@ function createStore(slidesDir) {
     const folders = [];
     for (const name of await listFolderNames()) {
       const manifest = await readManifest(name);
-      folders.push({
-        name,
-        editable: Boolean(manifest),
-        count: manifest ? manifest.slides.length : await countImages(name),
-        live: name === live,
-      });
+      if (manifest) folders.push({ name, count: manifest.slides.length, live: name === live });
     }
     return folders;
   }
 
   async function getFolder(name) {
-    await requireFolder(name);
-    const manifest = await readManifest(name);
-    if (manifest) return { name, editable: true, slides: manifest.slides };
-    const files = (await fs.readdir(path.join(folderDir(name), 'img')).catch(() => [])).filter((f) => FILE_RE.test(f));
-    return { name, editable: false, images: files.sort().map((f) => `img/${f}`) };
+    const manifest = await requireFolder(name);
+    return { name, slides: manifest.slides };
   }
 
   async function createFolder(isoDate) {
@@ -209,7 +191,7 @@ function createStore(slidesDir) {
 
   function addSlide(name, { background, text }) {
     return withLock(name, async () => {
-      const manifest = await requireEditable(name);
+      const manifest = await requireFolder(name);
       const bgBuf = await loadSource(background);
       const textBuf = await loadSource(text);
       const { metas, errors, warnings } = await inspectRoles([['background', bgBuf], ['text', textBuf]]);
@@ -231,7 +213,7 @@ function createStore(slidesDir) {
   function replaceImage(name, id, role, source) {
     return withLock(name, async () => {
       if (role !== 'background' && role !== 'text') throw new InvalidNameError(`Tipo de imagem inválido: ${role}`);
-      const manifest = await requireEditable(name);
+      const manifest = await requireFolder(name);
       const slide = manifest.slides.find((s) => s.id === id);
       if (!slide) throw new NotFoundError('Slide não encontrado.');
 
@@ -252,7 +234,7 @@ function createStore(slidesDir) {
 
   function removeSlide(name, id) {
     return withLock(name, async () => {
-      const manifest = await requireEditable(name);
+      const manifest = await requireFolder(name);
       const before = manifest.slides.length;
       manifest.slides = manifest.slides.filter((s) => s.id !== id);
       if (manifest.slides.length === before) throw new NotFoundError('Slide não encontrado.');
@@ -261,17 +243,16 @@ function createStore(slidesDir) {
   }
 
   // Deletes a Telão folder completely: images, slides.json, player and export modules.
-  // Hand-made folders (no slides.json) are refused, like every other write to them.
   function removeFolder(name) {
     return withLock(name, async () => {
-      await requireEditable(name);
+      await requireFolder(name);
       await fs.rm(folderDir(name), { recursive: true });
     });
   }
 
   // Rewrites the player and export modules of every Telão folder (those with a slides.json),
   // so folders last saved by an older version get new features without anyone saving them.
-  // Images and slides.json are not touched, nor are hand-made folders. One folder failing
+  // Images and slides.json are not touched, nor are directories without a slides.json. One folder failing
   // does not stop the others.
   async function refreshPlayers() {
     const refreshed = [];
@@ -279,7 +260,7 @@ function createStore(slidesDir) {
     for (const name of await listFolderNames()) {
       try {
         const done = await withLock(name, async () => {
-          if (!(await readManifest(name))) return false;
+          if (!(await readManifest(name))) return false; // removed since the listing
           await writePlayer(name);
           return true;
         });
@@ -295,7 +276,7 @@ function createStore(slidesDir) {
   // else means the admin page is out of date (another tab changed the folder).
   function reorderSlides(name, ids) {
     return withLock(name, async () => {
-      const manifest = await requireEditable(name);
+      const manifest = await requireFolder(name);
       const byId = new Map(manifest.slides.map((s) => [s.id, s]));
       const valid = Array.isArray(ids) && ids.length === byId.size && new Set(ids).size === ids.length && ids.every((id) => byId.has(id));
       if (!valid) throw new ConflictError('A pasta mudou desde que a página foi aberta. Recarregue e tente de novo.');
@@ -307,10 +288,8 @@ function createStore(slidesDir) {
 
   function copySlides(name, from, slideIds) {
     return withLock(name, async () => {
-      const manifest = await requireEditable(name);
-      await requireFolder(from);
-      const source = await readManifest(from);
-      if (!source) throw new ConflictError(`A pasta ${from} não tem slides para copiar; escolha imagens avulsas dela em "Adicionar slide".`);
+      const manifest = await requireFolder(name);
+      const source = await requireFolder(from);
       const wanted = new Set(slideIds || []);
       const picked = source.slides.filter((s) => wanted.has(s.id));
       if (picked.length === 0) throw new NotFoundError('Nenhum slide selecionado foi encontrado.');

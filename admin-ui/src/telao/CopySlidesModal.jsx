@@ -3,7 +3,7 @@ import { api } from '../api';
 import { CloseIcon } from '../icons';
 
 export function CopySlidesModal({ folder, folders, onClose, onCopied }) {
-  const sources = folders.filter((f) => f.editable && f.name !== folder.name && f.count > 0);
+  const sources = folders.filter((f) => f.name !== folder.name && f.count > 0);
   const [from, setFrom] = useState(sources[0] ? sources[0].name : '');
   const [slides, setSlides] = useState([]);
   const [picked, setPicked] = useState(new Set());

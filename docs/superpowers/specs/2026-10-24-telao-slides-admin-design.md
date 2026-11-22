@@ -2,6 +2,8 @@
 
 Data: 2026-10-24
 
+**Atualização (2026-11-22, decisão do Rafael):** não existem mais apresentações feitas à mão; todas as pastas são geradas pelo admin. A regra "editável × somente leitura" abaixo foi removida do código. Agora uma **pasta da Telão** é um diretório `mm_dd_yyyy` que tem `slides.json`; qualquer outro diretório é ignorado: não aparece no painel, a API responde `404` para ele, o refresh do player não o toca e a página principal do site não o considera. As respostas de `GET /api/slides/folders` e `GET /api/slides/folders/:name` perderam os campos `editable` e `images`, e a etiqueta "só leitura" saiu do painel. As seções abaixo descrevem o desenho original.
+
 ## Intenção
 
 O site `announcements.sdarmorangevale.com` é projetado no telão da igreja. As apresentações ficam na VPS em `/opt/announcements/slides/<mm_dd_yyyy>/`, e a página principal do site redireciona para a pasta de data mais recente (veja "Estado atual").

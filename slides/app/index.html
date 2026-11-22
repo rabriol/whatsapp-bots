@@ -22,10 +22,9 @@ function todayKeyInChurchTz() {
     .format(new Date()).replaceAll('-', '');
 }
 
-// Pasta sem slides.json (feita à mão) sempre conta como tendo conteúdo.
+// Só pastas da Telão contam: precisam de slides.json com pelo menos um slide.
 async function hasContent(name) {
   const res = await fetch(`/${name}/slides.json`, { cache: 'no-store' });
-  if (res.status === 404) return true;
   if (!res.ok) return false;
   const data = await res.json().catch(() => null);
   return Boolean(data && Array.isArray(data.slides) && data.slides.length > 0);

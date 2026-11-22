@@ -105,10 +105,8 @@ export default function Telao() {
               <div className="card-head">
                 <h2>{folder.name}</h2>
                 <div className="row-actions">
-                  {folder.editable && (
-                    <button className="btn-ghost" onClick={() => setCopyOpen(true)}>Copiar slides de outra pasta</button>
-                  )}
-                  {folder.editable && !confirmRemove && (
+                  <button className="btn-ghost" onClick={() => setCopyOpen(true)}>Copiar slides de outra pasta</button>
+                  {!confirmRemove && (
                     <button className="btn-ghost" onClick={() => setConfirmRemove(true)}>Remover pasta</button>
                   )}
                   <a className="btn-ghost" href={`${SITE_URL}/${folder.name}/`} target="_blank" rel="noreferrer">
@@ -116,7 +114,7 @@ export default function Telao() {
                   </a>
                 </div>
               </div>
-              {folder.editable && confirmRemove && (
+              {confirmRemove && (
                 <div className="confirm-row telao-remove-confirm">
                   <span>
                     Remover a pasta {folder.name} e {folder.slides.length === 1 ? 'o slide' : `os ${folder.slides.length} slides`}, com as imagens?
@@ -126,9 +124,6 @@ export default function Telao() {
                   <button className="btn-ghost" onClick={() => setConfirmRemove(false)} disabled={removing}>Cancelar</button>
                   <button className="btn-danger" onClick={removeFolder} disabled={removing}>{removing ? 'Removendo...' : 'Remover pasta'}</button>
                 </div>
-              )}
-              {!folder.editable && (
-                <p className="subtitle">Apresentação feita à mão: as imagens podem ser reaproveitadas em outras pastas, mas esta pasta não é editada aqui.</p>
               )}
               <SlideGrid
                 folder={folder}

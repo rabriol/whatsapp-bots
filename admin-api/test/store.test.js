@@ -23,8 +23,9 @@ async function pair(seed = 0) {
   };
 }
 
-// A hand-made folder like 10_24_2026: images and an index.html, no slides.json.
-async function makeReadOnly(dir, name = '10_24_2026') {
+// A directory left on disk without slides.json (for example an old hand-made presentation).
+// It is not a Telão folder: the store must ignore it and never touch it.
+async function makeLeftover(dir, name = '10_24_2026') {
   const img = await makeJpeg({ width: 1920, height: 1080 });
   const file = `${sha(img).slice(0, 12)}.jpg`;
   await fs.mkdir(path.join(dir, name, 'img'), { recursive: true });
@@ -78,16 +79,16 @@ test('addSlide with mismatched proportions is ValidationError and writes nothing
 
 test('addSlide by reference copies bytes identically', async () => {
   const { dir, store } = await setup();
-  const ro = await makeReadOnly(dir);
   const src = await store.createFolder('2026-11-01');
   const srcSlide = await store.addSlide(src.name, await pair(5));
   const dst = await store.createFolder('2026-11-08');
   const slide = await store.addSlide(dst.name, {
-    background: { folder: ro.name, file: ro.file },
+    background: { folder: src.name, file: path.basename(srcSlide.background) },
     text: { folder: src.name, file: path.basename(srcSlide.text) },
   });
   const copiedBg = await fs.readFile(path.join(dir, dst.name, slide.background));
-  assert.equal(sha(copiedBg), sha(ro.img));
+  const originalBg = await fs.readFile(path.join(dir, src.name, srcSlide.background));
+  assert.equal(sha(copiedBg), sha(originalBg));
   const copiedText = await fs.readFile(path.join(dir, dst.name, slide.text));
   const originalText = await fs.readFile(path.join(dir, src.name, srcSlide.text));
   assert.equal(sha(copiedText), sha(originalText));
@@ -129,19 +130,27 @@ test('concurrent adds keep both slides', async () => {
   assert.equal((await readManifest(dir, name)).slides.length, 2);
 });
 
-test('read-only folder rejects every write with ConflictError', async () => {
+test('a directory without slides.json is not a Telão folder: every operation says NotFound and leaves it intact', async () => {
   const { dir, store } = await setup();
-  const ro = await makeReadOnly(dir);
+  const leftover = await makeLeftover(dir);
   const p = await pair();
-  await assert.rejects(store.addSlide(ro.name, p), ConflictError);
-  await assert.rejects(store.replaceImage(ro.name, 'x', 'background', p.background), ConflictError);
-  await assert.rejects(store.removeSlide(ro.name, 'x'), ConflictError);
   const other = await store.createFolder('2026-11-01');
   await store.addSlide(other.name, p);
   const otherIds = (await readManifest(dir, other.name)).slides.map((s) => s.id);
-  await assert.rejects(store.copySlides(ro.name, other.name, otherIds), ConflictError);
-  assert.equal(await fs.readFile(path.join(dir, ro.name, 'index.html'), 'utf8'), 'hand made');
-  await assert.rejects(fs.access(path.join(dir, ro.name, 'slides.json')));
+
+  await assert.rejects(store.getFolder(leftover.name), NotFoundError);
+  await assert.rejects(store.addSlide(leftover.name, p), NotFoundError);
+  await assert.rejects(store.replaceImage(leftover.name, 'x', 'background', p.background), NotFoundError);
+  await assert.rejects(store.removeSlide(leftover.name, 'x'), NotFoundError);
+  await assert.rejects(store.reorderSlides(leftover.name, []), NotFoundError);
+  await assert.rejects(store.removeFolder(leftover.name), NotFoundError);
+  await assert.rejects(store.copySlides(leftover.name, other.name, otherIds), NotFoundError);
+  await assert.rejects(store.copySlides(other.name, leftover.name, ['x']), NotFoundError);
+
+  assert.equal(await fs.readFile(path.join(dir, leftover.name, 'index.html'), 'utf8'), 'hand made');
+  assert.deepEqual(await listImg(dir, leftover.name), [leftover.file]);
+  await assert.rejects(fs.access(path.join(dir, leftover.name, 'slides.json')));
+  await assert.rejects(fs.access(path.join(dir, leftover.name, 'export')));
 });
 
 test('copySlides keeps source order and new ids', async () => {
@@ -156,13 +165,6 @@ test('copySlides keeps source order and new ids', async () => {
   assert.equal((await readManifest(dir, dst.name)).slides.length, 2);
 });
 
-test('copy from read-only folder is ConflictError', async () => {
-  const { dir, store } = await setup();
-  const ro = await makeReadOnly(dir);
-  const dst = await store.createFolder('2026-11-08');
-  await assert.rejects(store.copySlides(dst.name, ro.name, ['x']), ConflictError);
-});
-
 test('listFolders sorts by date across years', async () => {
   const { dir, store } = await setup();
   await store.createFolder('2026-12-31');
@@ -172,13 +174,13 @@ test('listFolders sorts by date across years', async () => {
   assert.deepEqual(names, ['01_05_2027', '12_31_2026']);
 });
 
-test('liveFolderName skips future and empty', async () => {
+test('liveFolderName skips future folders, empty folders and directories without slides.json', async () => {
   const { dir, store } = await setup();
-  await makeReadOnly(dir, '10_24_2026');
+  await makeLeftover(dir, '10_24_2026');
   await store.createFolder('2026-10-31');
   const { name } = await store.createFolder('2026-11-07');
   await store.addSlide(name, await pair(1));
-  assert.equal(await store.liveFolderName('20261101'), '10_24_2026');
+  assert.equal(await store.liveFolderName('20261101'), null);
   assert.equal(await store.liveFolderName('20261107'), '11_07_2026');
   const live = (await store.listFolders('20261107')).filter((f) => f.live).map((f) => f.name);
   assert.deepEqual(live, ['11_07_2026']);
@@ -206,12 +208,6 @@ test('reorderSlides with a stale or partial list is ConflictError', async () => 
   assert.deepEqual((await readManifest(dir, name)).slides.map((s) => s.id), [a.id, b.id]);
 });
 
-test('reorderSlides on a read-only folder is ConflictError', async () => {
-  const { dir, store } = await setup();
-  const ro = await makeReadOnly(dir);
-  await assert.rejects(store.reorderSlides(ro.name, []), ConflictError);
-});
-
 const EXPORT_FILES = ['frames.js', 'mediabunny.js', 'fflate.js'];
 
 test('createFolder copies the MOV export modules next to the player', async () => {
@@ -231,13 +227,6 @@ test('saving a folder restores missing export modules', async () => {
   await fs.access(path.join(dir, '11_01_2026', 'export', 'frames.js'));
 });
 
-test('hand-made folders never get an export directory', async () => {
-  const { dir, store } = await setup();
-  const ro = await makeReadOnly(dir);
-  await assert.rejects(store.addSlide(ro.name, await pair()), ConflictError);
-  await assert.rejects(fs.access(path.join(dir, ro.name, 'export')));
-});
-
 const { NotFoundError, InvalidNameError } = require('../src/slides/store');
 
 test('removeFolder deletes the whole folder and leaves the others untouched', async () => {
@@ -255,14 +244,6 @@ test('removeFolder deletes the whole folder and leaves the others untouched', as
   assert.equal((await listImg(dir, '11_02_2026')).length, 2);
 });
 
-test('removeFolder refuses a hand-made folder and leaves it intact', async () => {
-  const { dir, store } = await setup();
-  const ro = await makeReadOnly(dir);
-  await assert.rejects(store.removeFolder(ro.name), ConflictError);
-  assert.deepEqual(await listImg(dir, ro.name), [ro.file]);
-  assert.equal(await fs.readFile(path.join(dir, ro.name, 'index.html'), 'utf8'), 'hand made');
-});
-
 test('removeFolder on a missing folder is NotFoundError', async () => {
   const { store } = await setup();
   await assert.rejects(store.removeFolder('11_01_2026'), NotFoundError);
@@ -277,11 +258,11 @@ test('removeFolder only accepts mm_dd_yyyy names, never paths', async () => {
   await fs.access(path.join(dir, '11_01_2026', 'slides.json'));
 });
 
-test('refreshPlayers rewrites the player and export modules of editable folders only', async () => {
+test('refreshPlayers rewrites the player and export modules of Telão folders only', async () => {
   const { dir, store } = await setup();
   await store.createFolder('2026-11-01');
   await store.addSlide('11_01_2026', await pair());
-  const ro = await makeReadOnly(dir);
+  const leftover = await makeLeftover(dir);
   const manifestBefore = await readManifest(dir, '11_01_2026');
   const imagesBefore = await listImg(dir, '11_01_2026');
   // a folder last saved by an older version: old player, no export modules
@@ -294,8 +275,8 @@ test('refreshPlayers rewrites the player and export modules of editable folders 
   await fs.access(path.join(dir, '11_01_2026', 'export', 'frames.js'));
   assert.deepEqual(await readManifest(dir, '11_01_2026'), manifestBefore);
   assert.deepEqual(await listImg(dir, '11_01_2026'), imagesBefore);
-  assert.equal(await fs.readFile(path.join(dir, ro.name, 'index.html'), 'utf8'), 'hand made');
-  await assert.rejects(fs.access(path.join(dir, ro.name, 'export')));
+  assert.equal(await fs.readFile(path.join(dir, leftover.name, 'index.html'), 'utf8'), 'hand made');
+  await assert.rejects(fs.access(path.join(dir, leftover.name, 'export')));
 });
 
 test('refreshPlayers keeps going and reports a folder it cannot refresh', async () => {
@@ -318,4 +299,17 @@ test('refreshPlayers keeps going and reports a folder it cannot refresh', async 
 test('refreshPlayers does nothing when the slides directory does not exist', async () => {
   const store = createStore(path.join(os.tmpdir(), `telao-missing-${Date.now()}`));
   assert.deepEqual(await store.refreshPlayers(), { refreshed: [], failed: [] });
+});
+
+test('listFolders and getFolder only know Telão folders and expose no editable flag', async () => {
+  const { dir, store } = await setup();
+  await makeLeftover(dir);
+  await fs.mkdir(path.join(dir, 'notadate'));
+  const { name } = await store.createFolder('2026-11-01');
+  await store.addSlide(name, await pair(1));
+
+  assert.deepEqual(await store.listFolders('20261101'), [{ name: '11_01_2026', count: 1, live: true }]);
+  const folder = await store.getFolder(name);
+  assert.deepEqual(Object.keys(folder).sort(), ['name', 'slides']);
+  assert.equal(folder.slides.length, 1);
 });
