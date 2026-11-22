@@ -39,10 +39,10 @@ Hoje, mudar uma apresentação exige editar HTML à mão e copiar arquivos para 
 
 ## Estado atual (relevante para o builder)
 
-### Site announcements (fora deste repositório)
+### Site announcements (pasta `slides/` deste repositório)
 
-- **Código-fonte**: `~/Developer/slides` no Mac do Rafael, sem git. Na VPS fica em `/opt/announcements/`.
-- **Container `announcements`**: nginx 1.27-alpine com `./slides` montado em `/usr/share/nginx/html:ro`. Ele entra na rede externa `whatsapp-bots_whatsapp-net` e o `cloudflared` deste repositório o publica.
+- **Código-fonte**: `~/Developer/whatsapp-bots/slides` no Mac do Rafael, dentro deste repositório (`slides/`). O deploy do GitHub o publica como o serviço `announcements` do `docker-compose.yml` principal; as pastas de slides ficam em `/opt/announcements/slides` (`SLIDES_HOST_DIR`), fora do repositório.
+- **Container `announcements`**: nginx 1.27-alpine com `${SLIDES_HOST_DIR:-/opt/announcements/slides}` montado em `/usr/share/nginx/html:ro`. Ele entra na rede `whatsapp-net` deste repositório e o `cloudflared` o publica.
 - **Rotas do nginx**:
   - `/` serve `app/index.html` (que vem da imagem Docker). Essa página busca `/_dates/` (autoindex JSON da pasta `slides/`), filtra os nomes `^\d{2}_\d{2}_\d{4}$`, ordena por ano, mês e dia e redireciona para a mais recente.
   - Arquivos inexistentes dão 404.
@@ -161,7 +161,7 @@ Este esboço é sugestão; os detalhes ficam a critério do builder:
   - **Pasta somente leitura**: grade simples só com as imagens, sem ações.
 - **Estilo**: usar só as variáveis e as classes de `styles.css` e seguir o padrão visual das páginas existentes, nos temas claro e escuro. CSS novo só para o que não existe, como a grade de miniaturas e o xadrez, usando as variáveis `--ink-*` e `--accent`.
 
-### Página principal do site (mudança no projeto `~/Developer/slides`, fora deste repositório)
+### Página principal do site (mudança no projeto `slides/` deste repositório)
 
 Decisão do Rafael: a página principal abre a **pasta mais recente com data até hoje e que tenha pelo menos um slide**. Pastas futuras ou vazias ficam de fora até a data chegar, mas continuam acessíveis pelo endereço direto (`/<mm_dd_yyyy>/`), para conferir antes.
 
@@ -169,7 +169,7 @@ Decisão do Rafael: a página principal abre a **pasta mais recente com data at�
 - **"Pelo menos um slide"**: o `slides.json` da pasta tem `slides.length > 0`. Uma pasta **sem** `slides.json`, como a `10_24_2026`, conta como tendo conteúdo.
 - **Ordem da busca**: percorrer as datas candidatas da mais nova para a mais antiga e parar na primeira que tiver conteúdo.
 - **Nenhuma elegível**: mostrar "Nenhuma apresentação disponível." (decisão do Claude).
-- **Onde muda**: em `app/index.html`. Como esse arquivo vai dentro da imagem Docker, o deploy é manual: copiar o projeto para `/opt/announcements` e rodar `docker compose up -d --build` lá. O Claude tem acesso SSH à VPS e faz isso. Atualizar também a cópia em `~/Developer/slides`.
+- **Onde muda**: em `app/index.html`. Como esse arquivo vai dentro da imagem Docker, o deploy é o automático do GitHub: ao mesclar na `main`, o `docker compose build` e o `up -d` refazem a imagem do serviço `announcements`.
 - **No admin**: na lista de pastas, marcar com uma etiqueta "no ar" a pasta que a página principal está mostrando agora, usando a mesma regra. Isso é decisão do Claude e é opcional, mas ajuda a saber o que vai aparecer no telão.
 
 ## Decisões que ficam com o builder
@@ -181,4 +181,4 @@ Decisão do Rafael: a página principal abre a **pasta mais recente com data at�
 
 ## Riscos conhecidos
 
-- **Cópia no Mac**: `~/Developer/slides/slides/` deixa de ser a fonte da verdade. Um `rsync --delete` do Mac para a VPS apagaria o que foi feito pelo admin.
+- **Cópia no Mac**: `~/Developer/whatsapp-bots/slides/slides/` (ignorada pelo git) deixa de ser a fonte da verdade. Um `rsync --delete` do Mac para a VPS apagaria o que foi feito pelo admin.

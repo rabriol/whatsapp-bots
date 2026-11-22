@@ -4,7 +4,7 @@
 
 **Goal:** Adicionar ao admin uma aba "Telão" para gerenciar as pastas de apresentações de `announcements.sdarmorangevale.com`. As pastas novas são exibidas por um player genérico, e a página principal do site passa a abrir a pasta mais recente com data até hoje e com pelo menos um slide.
 
-**Architecture:** O admin-api ganha um módulo `src/slides/` (sem Express) que lê e escreve a pasta de slides montada da VPS, mais um router `/api/slides` criado por uma fábrica que recebe o diretório, o que permite testá-lo com uma pasta temporária. Cada pasta editável tem um `slides.json` (fonte da verdade) e um `index.html` (player genérico copiado do template). O admin-ui ganha a página `Telao.jsx` com componentes em `src/telao/`. Por fim, o `app/index.html` do projeto `~/Developer/slides` (fora deste repositório) ganha a nova regra da página principal.
+**Architecture:** O admin-api ganha um módulo `src/slides/` (sem Express) que lê e escreve a pasta de slides montada da VPS, mais um router `/api/slides` criado por uma fábrica que recebe o diretório, o que permite testá-lo com uma pasta temporária. Cada pasta editável tem um `slides.json` (fonte da verdade) e um `index.html` (player genérico copiado do template). O admin-ui ganha a página `Telao.jsx` com componentes em `src/telao/`. Por fim, o `app/index.html` do projeto `slides/` deste repositório ganha a nova regra da página principal.
 
 **Tech Stack:** Node 22 + Express 4 (CommonJS), `sharp` para ler as imagens, `multer` para upload, testes com `node:test` (embutido, sem dependência nova de teste). React 18 + Vite no admin-ui. nginx no site announcements.
 
@@ -62,7 +62,7 @@
 | `admin-ui/src/telao/*.jsx` | `FolderList`, `SlideGrid`, `NewFolderModal`, `AddSlideModal`, `ImageSource`, `CopySlidesModal` |
 | `admin-ui/src/App.jsx`, `src/styles.css` | Item de topo e estilos novos |
 | `docker-compose.yml`, `.gitignore` | Volume do admin-api; ignorar `.superpowers/` |
-| `~/Developer/slides/app/index.html` | Regra da página principal (fora do repositório; deploy manual) |
+| `~/Developer/whatsapp-bots/slides/app/index.html` | Regra da página principal (deploy automático pelo GitHub) |
 
 ---
 
@@ -212,7 +212,7 @@ git commit -m "Add slide folder store with atomic manifest writes"
 - Consumes: o `slides.json` da pasta, buscado com `fetch('slides.json', { cache: 'no-store' })` relativo à página.
 - Produces: um único HTML estático, sem dependências externas, que contém a string `<!-- telao-player -->`.
 
-O comportamento segue as Global Constraints do player. Tomar como referência de controles e estilo a apresentação feita à mão (`/opt/announcements/slides/10_24_2026/index.html` na VPS, ou `~/Developer/slides/slides/10_24_2026/index.html`): a barra `.controls`, os textos dos botões, o atalho de teclado e a pausa com `animation-play-state`.
+O comportamento segue as Global Constraints do player. Tomar como referência de controles e estilo a apresentação feita à mão (`/opt/announcements/slides/10_24_2026/index.html` na VPS, ou `~/Developer/whatsapp-bots/slides/slides/10_24_2026/index.html`): a barra `.controls`, os textos dos botões, o atalho de teclado e a pausa com `animation-play-state`.
 
 Estrutura dos passos: o slide `i` tem dois passos, `2i` (só o fundo) e `2i+1` (fundo + texto). Entrar num passo par agenda a ida para `2i+1` em 1 s. Avançar ou clicar vai para o passo seguinte. Pausar também suspende esse temporizador: guardar o tempo restante e retomar ao continuar.
 
@@ -335,7 +335,7 @@ Layout (opção A do spec):
 
 - [ ] **Step 1: Rodar o admin localmente**
 
-Criar uma pasta de teste com uma subpasta somente leitura (copiar `~/Developer/slides/slides/10_24_2026`) e uma editável criada pela API. Subir o admin-api com `SLIDES_DIR=<pasta de teste>` e o admin-ui por uma configuração temporária em `.claude/launch.json` (a de `admin-ui` já existe; adicionar uma para o admin-api na porta 3000 e removê-la no fim).
+Criar uma pasta de teste com uma subpasta somente leitura (copiar `~/Developer/whatsapp-bots/slides/slides/10_24_2026`) e uma editável criada pela API. Subir o admin-api com `SLIDES_DIR=<pasta de teste>` e o admin-ui por uma configuração temporária em `.claude/launch.json` (a de `admin-ui` já existe; adicionar uma para o admin-api na porta 3000 e removê-la no fim).
 
 Expected: `GET /api/slides/folders` responde no proxy do Vite.
 
@@ -419,7 +419,7 @@ git commit -m "Add slide upload, replace and copy to the Telão tab"
 **Files:**
 - Modify: `docker-compose.yml`, adicionando ao serviço `admin-api` o volume `- ${SLIDES_HOST_DIR:-/opt/announcements/slides}:/app/slides`, ao lado do volume do `service-account.json`.
 - Modify: `.gitignore`, adicionando `.superpowers/`.
-- Modify (fora do repositório, sem git): `~/Developer/slides/app/index.html`.
+- Modify (deploy automático pelo GitHub): `~/Developer/whatsapp-bots/slides/app/index.html`.
 
 **Interfaces:**
 - Consumes: o formato do `slides.json` e a mesma regra de `liveFolderName` da Task 2, reimplementada no navegador.
@@ -438,7 +438,7 @@ Expected: `10_24_2026` com hoje = `20261101`, e `11_07_2026` com hoje = `2026110
 
 - [ ] **Step 2: Publicar o site announcements**
 
-Run: `rsync -a --exclude .env --exclude slides ~/Developer/slides/ root@srv1318351.hstgr.cloud:/opt/announcements/`
+Run: `rsync -a --exclude .env --exclude slides ~/Developer/whatsapp-bots/slides/ root@srv1318351.hstgr.cloud:/opt/announcements/`
 Depois: `ssh root@srv1318351.hstgr.cloud 'cd /opt/announcements && docker compose up -d --build'`
 
 O `--exclude slides` é obrigatório. A pasta `slides/` da VPS passa a ser escrita pelo admin, e o rsync não pode sobrescrevê-la.

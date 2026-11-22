@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Anúncios</title>
+<style>body{margin:0;min-height:100dvh;display:grid;place-items:center;background:#080f1d;color:#fff;font-family:system-ui,sans-serif}</style>
+</head><body><p id="msg">Carregando…</p>
+<script>
+// Abre a pasta mm_dd_yyyy mais recente com data até hoje (fuso da igreja) e que
+// tenha conteúdo. Pastas futuras ou vazias ficam de fora até a data chegar.
+const FOLDER_RE = /^\d{2}_\d{2}_\d{4}$/;
+const dateKey = (name) => { const [m, d, y] = name.split('_'); return y + m + d; };
+
+// pickLive:start
+async function pickLive(names, todayKey, hasContent) {
+  const candidates = names.filter((n) => FOLDER_RE.test(n) && dateKey(n) <= todayKey)
+    .sort((a, b) => dateKey(b).localeCompare(dateKey(a)));
+  for (const name of candidates) if (await hasContent(name)) return name;
+  return null;
+}
+// pickLive:end
+
+function todayKeyInChurchTz() {
+  return new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Los_Angeles', year: 'numeric', month: '2-digit', day: '2-digit' })
+    .format(new Date()).replaceAll('-', '');
+}
+
+// Pasta sem slides.json (feita à mão) sempre conta como tendo conteúdo.
+async function hasContent(name) {
+  const res = await fetch(`/${name}/slides.json`, { cache: 'no-store' });
+  if (res.status === 404) return true;
+  if (!res.ok) return false;
+  const data = await res.json().catch(() => null);
+  return Boolean(data && Array.isArray(data.slides) && data.slides.length > 0);
+}
+
+if (typeof document !== 'undefined') {
+  fetch('/_dates/', { cache: 'no-store' }).then((r) => r.json()).then(async (entries) => {
+    const names = entries.filter((e) => e.type === 'directory').map((e) => e.name);
+    const live = await pickLive(names, todayKeyInChurchTz(), hasContent);
+    if (!live) throw new Error('nenhuma pasta');
+    location.replace('/' + live + '/');
+  }).catch(() => { document.getElementById('msg').textContent = 'Nenhuma apresentação disponível.'; });
+}
+</script></body></html>
