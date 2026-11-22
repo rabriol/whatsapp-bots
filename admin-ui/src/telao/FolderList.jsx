@@ -16,11 +16,10 @@ export function FolderList({ folders, selected, onSelect, onNewFolder }) {
           >
             <span className="telao-folder-name">{f.name}</span>
             <span className="telao-folder-meta">
-              {f.editable ? `${f.count} ${f.count === 1 ? 'slide' : 'slides'}` : `${f.count} ${f.count === 1 ? 'imagem' : 'imagens'}`}
+              {f.count} {f.count === 1 ? 'slide' : 'slides'}
             </span>
             <span className="telao-folder-tags">
               {f.live && <span className="pill pill-urgent">no ar</span>}
-              {!f.editable && <span className="pill pill-default">só leitura</span>}
             </span>
           </button>
         ))}

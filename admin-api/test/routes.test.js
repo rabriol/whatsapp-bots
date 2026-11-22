@@ -30,7 +30,8 @@ async function slideForm({ opaqueText = false } = {}) {
   return form;
 }
 
-async function makeReadOnly(dir) {
+// A directory left on disk without slides.json (for example an old hand-made presentation).
+async function makeLeftover(dir) {
   await fs.mkdir(path.join(dir, '10_24_2026', 'img'), { recursive: true });
   await fs.writeFile(path.join(dir, '10_24_2026', 'img', 'ab12cd34ef56.jpg'), await makeJpeg({ width: 1920, height: 1080 }));
 }
@@ -49,14 +50,13 @@ test('create folder then add slide via upload', async () => {
 });
 
 test('add slide via references', async () => {
-  const { dir, base } = await startServer();
-  await makeReadOnly(dir);
+  const { base } = await startServer();
   await postJson(`${base}/folders`, { date: '2026-11-01' });
   await fetch(`${base}/folders/11_01_2026/slides`, { method: 'POST', body: await slideForm() });
   const src = await (await fetch(`${base}/folders/11_01_2026`)).json();
   await postJson(`${base}/folders`, { date: '2026-11-08' });
   const form = new FormData();
-  form.append('backgroundRef', JSON.stringify({ folder: '10_24_2026', file: 'ab12cd34ef56.jpg' }));
+  form.append('backgroundRef', JSON.stringify({ folder: '11_01_2026', file: path.basename(src.slides[0].background) }));
   form.append('textRef', JSON.stringify({ folder: '11_01_2026', file: path.basename(src.slides[0].text) }));
   const res = await fetch(`${base}/folders/11_08_2026/slides`, { method: 'POST', body: form });
   assert.equal(res.status, 201);
@@ -80,19 +80,19 @@ test('rejects traversal in folder and file params', async () => {
   assert.equal((await fetch(`${base}/folders/11_01_2026/slides`, { method: 'POST', body: form })).status, 400);
 });
 
-test('write to read-only folder is 409', async () => {
+test('write to a directory without slides.json is 404', async () => {
   const { dir, base } = await startServer();
-  await makeReadOnly(dir);
+  await makeLeftover(dir);
   const res = await fetch(`${base}/folders/10_24_2026/slides`, { method: 'POST', body: await slideForm() });
-  assert.equal(res.status, 409);
+  assert.equal(res.status, 404);
 });
 
-test('copy from read-only folder is 409', async () => {
+test('copy from a directory without slides.json is 404', async () => {
   const { dir, base } = await startServer();
-  await makeReadOnly(dir);
+  await makeLeftover(dir);
   await postJson(`${base}/folders`, { date: '2026-11-01' });
   const res = await postJson(`${base}/folders/11_01_2026/copy`, { from: '10_24_2026', slideIds: ['x'] });
-  assert.equal(res.status, 409);
+  assert.equal(res.status, 404);
 });
 
 test('oversized upload is 422', async () => {
@@ -125,11 +125,11 @@ test('DELETE folder removes it and answers 204', async () => {
   assert.deepEqual(await (await fetch(`${base}/folders`)).json(), []);
 });
 
-test('DELETE folder maps errors: 404 missing, 400 bad name, 409 hand-made', async () => {
+test('DELETE folder maps errors: 404 missing or without slides.json, 400 bad name', async () => {
   const { dir, base } = await startServer();
   assert.equal((await fetch(`${base}/folders/11_01_2026`, { method: 'DELETE' })).status, 404);
   assert.equal((await fetch(`${base}/folders/not-a-folder`, { method: 'DELETE' })).status, 400);
-  await makeReadOnly(dir);
-  assert.equal((await fetch(`${base}/folders/10_24_2026`, { method: 'DELETE' })).status, 409);
+  await makeLeftover(dir);
+  assert.equal((await fetch(`${base}/folders/10_24_2026`, { method: 'DELETE' })).status, 404);
   await fs.access(path.join(dir, '10_24_2026', 'img', 'ab12cd34ef56.jpg'));
 });

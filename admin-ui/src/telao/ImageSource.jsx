@@ -13,10 +13,7 @@ export function ImageSource({ label, value, onChange, folders, currentFolder }) 
   useEffect(() => {
     if (mode !== 'pick' || !pickFolder) { setImages([]); return; }
     api.getSlideFolder(pickFolder).then((folder) => {
-      const paths = folder.editable
-        ? [...new Set(folder.slides.flatMap((s) => [s.background, s.text]))]
-        : folder.images;
-      setImages(paths);
+      setImages([...new Set(folder.slides.flatMap((s) => [s.background, s.text]))]);
     }).catch(() => setImages([]));
   }, [mode, pickFolder]);
 

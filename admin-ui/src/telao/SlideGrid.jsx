@@ -12,19 +12,6 @@ export function SlideGrid({ folder, onChanged, onAddSlide, onReplace, onError })
 
   useEffect(() => { setPending(null); }, [folder]);
 
-  if (!folder.editable) {
-    return (
-      <div className="telao-grid">
-        {folder.images.length === 0 && <div className="empty-state">Nenhuma imagem nesta pasta.</div>}
-        {folder.images.map((img) => (
-          <div key={img} className="telao-card">
-            <img className="telao-thumb" src={api.slideImageUrl(folder.name, img)} alt="" loading="lazy" />
-          </div>
-        ))}
-      </div>
-    );
-  }
-
   const slides = pending || folder.slides;
 
   async function confirmDelete(id) {
