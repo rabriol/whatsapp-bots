@@ -276,3 +276,46 @@ test('removeFolder only accepts mm_dd_yyyy names, never paths', async () => {
   }
   await fs.access(path.join(dir, '11_01_2026', 'slides.json'));
 });
+
+test('refreshPlayers rewrites the player and export modules of editable folders only', async () => {
+  const { dir, store } = await setup();
+  await store.createFolder('2026-11-01');
+  await store.addSlide('11_01_2026', await pair());
+  const ro = await makeReadOnly(dir);
+  const manifestBefore = await readManifest(dir, '11_01_2026');
+  const imagesBefore = await listImg(dir, '11_01_2026');
+  // a folder last saved by an older version: old player, no export modules
+  await fs.writeFile(path.join(dir, '11_01_2026', 'index.html'), 'old player');
+  await fs.rm(path.join(dir, '11_01_2026', 'export'), { recursive: true });
+
+  assert.deepEqual(await store.refreshPlayers(), { refreshed: ['11_01_2026'], failed: [] });
+
+  assert.match(await fs.readFile(path.join(dir, '11_01_2026', 'index.html'), 'utf8'), /telao-player/);
+  await fs.access(path.join(dir, '11_01_2026', 'export', 'frames.js'));
+  assert.deepEqual(await readManifest(dir, '11_01_2026'), manifestBefore);
+  assert.deepEqual(await listImg(dir, '11_01_2026'), imagesBefore);
+  assert.equal(await fs.readFile(path.join(dir, ro.name, 'index.html'), 'utf8'), 'hand made');
+  await assert.rejects(fs.access(path.join(dir, ro.name, 'export')));
+});
+
+test('refreshPlayers keeps going and reports a folder it cannot refresh', async () => {
+  const { dir, store } = await setup();
+  await store.createFolder('2026-11-01');
+  await store.createFolder('2026-11-02');
+  // a plain file where the export directory belongs makes that one folder fail
+  await fs.rm(path.join(dir, '11_01_2026', 'export'), { recursive: true });
+  await fs.writeFile(path.join(dir, '11_01_2026', 'export'), 'not a directory');
+
+  const result = await store.refreshPlayers();
+
+  assert.deepEqual(result.refreshed, ['11_02_2026']);
+  assert.equal(result.failed.length, 1);
+  assert.equal(result.failed[0].name, '11_01_2026');
+  assert.ok(result.failed[0].error);
+  await fs.access(path.join(dir, '11_02_2026', 'export', 'frames.js'));
+});
+
+test('refreshPlayers does nothing when the slides directory does not exist', async () => {
+  const store = createStore(path.join(os.tmpdir(), `telao-missing-${Date.now()}`));
+  assert.deepEqual(await store.refreshPlayers(), { refreshed: [], failed: [] });
+});
