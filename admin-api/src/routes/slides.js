@@ -62,7 +62,12 @@ function createSlidesRouter(slidesDir) {
     res.json(await store.getFolder(req.params.name));
   }));
 
-  router.get('/folders/:name/img/:file', ...handle(null, async (req, res) => {
+  router.delete('/folders/:name', ...handle(null, async (req, res) => {
+    await store.removeFolder(req.params.name);
+    res.status(204).end();
+  }));
+
+  router.get('/folders/:name/img/:file',...handle(null, async (req, res) => {
     const file = await store.imagePath(req.params.name, req.params.file);
     res.set('Cache-Control', 'private, max-age=300');
     res.sendFile(file);

@@ -116,3 +116,20 @@ test('reorder slides via PUT /order', async () => {
   assert.deepEqual((await res.json()).map((s) => s.id), [ids[1], ids[0]]);
   assert.equal((await put({ ids: [ids[0]] })).status, 409);
 });
+
+test('DELETE folder removes it and answers 204', async () => {
+  const { base } = await startServer();
+  await postJson(`${base}/folders`, { date: '2026-11-01' });
+  const res = await fetch(`${base}/folders/11_01_2026`, { method: 'DELETE' });
+  assert.equal(res.status, 204);
+  assert.deepEqual(await (await fetch(`${base}/folders`)).json(), []);
+});
+
+test('DELETE folder maps errors: 404 missing, 400 bad name, 409 hand-made', async () => {
+  const { dir, base } = await startServer();
+  assert.equal((await fetch(`${base}/folders/11_01_2026`, { method: 'DELETE' })).status, 404);
+  assert.equal((await fetch(`${base}/folders/not-a-folder`, { method: 'DELETE' })).status, 400);
+  await makeReadOnly(dir);
+  assert.equal((await fetch(`${base}/folders/10_24_2026`, { method: 'DELETE' })).status, 409);
+  await fs.access(path.join(dir, '10_24_2026', 'img', 'ab12cd34ef56.jpg'));
+});

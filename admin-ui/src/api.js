@@ -55,6 +55,7 @@ export const api = {
   slideImageUrl: (name, path) => `/api/slides/folders/${name}/${path}`,
   addSlide: (name, formData) => upload(`/slides/folders/${name}/slides`, 'POST', formData),
   replaceSlideImage: (name, id, role, formData) => upload(`/slides/folders/${name}/slides/${id}/${role}`, 'PUT', formData),
+  deleteSlideFolder: (name) => request(`/slides/folders/${name}`, { method: 'DELETE' }),
   deleteSlide: (name, id) => request(`/slides/folders/${name}/slides/${id}`, { method: 'DELETE' }),
   reorderSlides: (name, ids) => request(`/slides/folders/${name}/order`, { method: 'PUT', body: JSON.stringify({ ids }) }),
   copySlides: (name, from, slideIds) => request(`/slides/folders/${name}/copy`, { method: 'POST', body: JSON.stringify({ from, slideIds }) }),

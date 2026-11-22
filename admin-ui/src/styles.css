@@ -445,6 +445,12 @@ td.muted {
   color: var(--ink-300);
 }
 
+.telao-remove-confirm {
+  flex-wrap: wrap;
+  font-size: 13px;
+  margin-top: 8px;
+}
+
 .schedule-row {
   display: flex;
   align-items: center;

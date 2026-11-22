@@ -18,6 +18,8 @@ export default function Telao() {
   const [slideModal, setSlideModal] = useState(null); // 'add' | { replace, slide }
   const [copyOpen, setCopyOpen] = useState(false);
   const [warnings, setWarnings] = useState([]);
+  const [confirmRemove, setConfirmRemove] = useState(false);
+  const [removing, setRemoving] = useState(false);
 
   async function loadFolders(select) {
     try {
@@ -51,6 +53,25 @@ export default function Telao() {
 
   useEffect(() => { loadFolders(); }, []);
   useEffect(() => { loadFolder(selected); }, [selected]);
+  useEffect(() => { setConfirmRemove(false); }, [selected]);
+
+  // Deletes the whole folder (images included), then selects the newest remaining one.
+  async function removeFolder() {
+    setRemoving(true);
+    try {
+      await api.deleteSlideFolder(folder.name);
+      setConfirmRemove(false);
+      setWarnings([]);
+      setError(null);
+      const list = await api.getSlideFolders();
+      setFolders(list);
+      setSelected(list[0] ? list[0].name : null);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setRemoving(false);
+    }
+  }
 
   return (
     <div className="content content-wide telao-page">
@@ -87,11 +108,25 @@ export default function Telao() {
                   {folder.editable && (
                     <button className="btn-ghost" onClick={() => setCopyOpen(true)}>Copiar slides de outra pasta</button>
                   )}
+                  {folder.editable && !confirmRemove && (
+                    <button className="btn-ghost" onClick={() => setConfirmRemove(true)}>Remover pasta</button>
+                  )}
                   <a className="btn-ghost" href={`${SITE_URL}/${folder.name}/`} target="_blank" rel="noreferrer">
                     Abrir no site ↗
                   </a>
                 </div>
               </div>
+              {folder.editable && confirmRemove && (
+                <div className="confirm-row telao-remove-confirm">
+                  <span>
+                    Remover a pasta {folder.name} e {folder.slides.length === 1 ? 'o slide' : `os ${folder.slides.length} slides`}, com as imagens?
+                    {folders.find((f) => f.name === folder.name)?.live && ' Ela está no ar: o site passará a mostrar a pasta anterior.'}
+                    {' '}Não dá para desfazer.
+                  </span>
+                  <button className="btn-ghost" onClick={() => setConfirmRemove(false)} disabled={removing}>Cancelar</button>
+                  <button className="btn-danger" onClick={removeFolder} disabled={removing}>{removing ? 'Removendo...' : 'Remover pasta'}</button>
+                </div>
+              )}
               {!folder.editable && (
                 <p className="subtitle">Apresentação feita à mão: as imagens podem ser reaproveitadas em outras pastas, mas esta pasta não é editada aqui.</p>
               )}

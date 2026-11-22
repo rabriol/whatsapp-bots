@@ -260,6 +260,15 @@ function createStore(slidesDir) {
     });
   }
 
+  // Deletes a Telão folder completely: images, slides.json, player and export modules.
+  // Hand-made folders (no slides.json) are refused, like every other write to them.
+  function removeFolder(name) {
+    return withLock(name, async () => {
+      await requireEditable(name);
+      await fs.rm(folderDir(name), { recursive: true });
+    });
+  }
+
   // ids must be exactly the folder's current slide ids in the new order; anything
   // else means the admin page is out of date (another tab changed the folder).
   function reorderSlides(name, ids) {
@@ -298,7 +307,7 @@ function createStore(slidesDir) {
     });
   }
 
-  return { listFolders, liveFolderName, getFolder, createFolder, imagePath, addSlide, replaceImage, removeSlide, reorderSlides, copySlides };
+  return { listFolders, liveFolderName, getFolder, createFolder, imagePath, addSlide, replaceImage, removeSlide, removeFolder, reorderSlides, copySlides };
 }
 
 module.exports = { createStore, NotFoundError, ConflictError, InvalidNameError, ValidationError };
