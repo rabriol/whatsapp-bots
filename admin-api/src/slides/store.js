@@ -5,6 +5,7 @@ const path = require('path');
 const crypto = require('crypto');
 const { FOLDER_RE, FILE_RE, folderNameFromDate, folderDateKey, todayKeyInTz } = require('./names');
 const { inspectImage, validateRole, validatePair, ValidationError } = require('./validate');
+const { exportAssets } = require('./exportAssets');
 
 const PLAYER_TEMPLATE = path.join(__dirname, 'player.html');
 const MANIFEST = 'slides.json';
@@ -70,6 +71,14 @@ function createStore(slidesDir) {
   async function writePlayer(name) {
     await fs.copyFile(PLAYER_TEMPLATE, path.join(folderDir(name), 'index.html'));
     await fs.chmod(path.join(folderDir(name), 'index.html'), 0o644);
+
+    // Modules the player loads only when someone downloads the slides as MOV/ZIP.
+    const exportDir = path.join(folderDir(name), 'export');
+    await fs.mkdir(exportDir, { recursive: true, mode: 0o755 });
+    for (const { name: file, from } of exportAssets()) {
+      await fs.copyFile(from, path.join(exportDir, file));
+      await fs.chmod(path.join(exportDir, file), 0o644);
+    }
   }
 
   async function removeOrphans(name, manifest) {

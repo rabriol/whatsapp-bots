@@ -26,14 +26,14 @@ button:focus-visible{outline:2px solid #e7b75c;outline-offset:3px}
 <div class="message" role="status">Carregando…</div>
 <div class="status" role="status"></div>
 <nav class="controls" aria-label="Controles da apresentação" hidden>
-<button id="back">Voltar</button><span class="count" aria-live="polite"></span><button id="next">Avançar</button><button id="pause" aria-pressed="false">Pausar</button><button id="restart">Recomeçar</button><button id="full">Tela cheia</button>
+<button id="back">Voltar</button><span class="count" aria-live="polite"></span><button id="next">Avançar</button><button id="pause" aria-pressed="false">Pausar</button><button id="restart">Recomeçar</button><button id="full">Tela cheia</button><button id="dl-one" data-dl>Baixar slide (MOV)</button><button id="dl-all" data-dl>Baixar todos (ZIP)</button>
 </nav>
 <script>
 const REVEAL_DELAY = 1000;
 const main = document.querySelector('main'), message = document.querySelector('.message'), status = document.querySelector('.status');
 const controls = document.querySelector('.controls'), count = document.querySelector('.count');
 const back = document.getElementById('back'), next = document.getElementById('next'), pause = document.getElementById('pause');
-let slides = [], step = 0, hideTimer;
+let slides = [], manifestSlides = [], step = 0, hideTimer;
 // Pending "show the text" timer; kept as remaining time so Pausar can suspend it.
 let revealTimer = null, revealDue = 0, revealRemaining = 0;
 
@@ -141,6 +141,7 @@ async function start() {
   }
   const list = Array.isArray(data.slides) ? data.slides : [];
   if (list.length === 0) { message.textContent = 'Nenhum slide nesta apresentação ainda.'; return; }
+  manifestSlides = list;
   // Load every image before the first slide so none appears empty on the telão.
   await Promise.all(list.flatMap((s) => [preload(s.background), preload(s.text)]));
   build(list);
@@ -152,6 +153,8 @@ async function start() {
   pause.onclick = togglePause;
   document.getElementById('restart').onclick = restart;
   document.getElementById('full').onclick = toggleFullscreen;
+  document.getElementById('dl-one').onclick = downloadOne;
+  document.getElementById('dl-all').onclick = downloadAll;
   document.addEventListener('fullscreenchange', () => { document.getElementById('full').textContent = document.fullscreenElement ? 'Sair da tela cheia' : 'Tela cheia'; });
   ['pointermove', 'pointerdown', 'focusin'].forEach((t) => document.addEventListener(t, reveal));
   document.addEventListener('keydown', (e) => {
@@ -163,6 +166,88 @@ async function start() {
   });
   setStep(0);
   reveal();
+}
+
+// --- MOV export for ProPresenter. The modules load only when someone clicks a download button. ---
+let exportKit = null;
+// Memoised so every click shares one kit, and with it one lock against overlapping jobs.
+function loadExportKit() {
+  if (!exportKit) {
+    exportKit = Promise.all([import('./export/exporter.js'), import('./export/frames.js'), import('./export/mediabunny.js'), import('./export/fflate.js')])
+      .then(([exporter, frames, mb, fflate]) => ({ exporter, frames, mb, fflate, exclusive: exporter.createExclusive() }))
+      .catch((err) => { exportKit = null; throw err; });
+  }
+  return exportKit;
+}
+
+async function loadImage(url) {
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return createImageBitmap(await res.blob());
+}
+
+function saveFile(blob, name) {
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = name;
+  document.body.append(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(link.href), 10000);
+}
+
+const setDownloading = (busy) => document.querySelectorAll('[data-dl]').forEach((b) => { b.disabled = busy; });
+
+// Runs one export job: loads the kit, checks browser support, keeps the buttons
+// disabled while it works, and shows any failure in the status box.
+async function runExport(job) {
+  let kit;
+  try { kit = await loadExportKit(); } catch { status.textContent = 'Não foi possível carregar o exportador de vídeo.'; return; }
+  const { exporter, mb, exclusive } = kit;
+  try {
+    await exclusive.run(async () => {
+      setDownloading(true);
+      try {
+        if (!(await exporter.isExportSupported(mb))) {
+          status.textContent = 'Seu navegador não consegue gerar vídeo. Use Chrome, Edge ou Safari recentes.';
+          return;
+        }
+        await job(kit);
+        status.textContent = '';
+      } finally {
+        setDownloading(false);
+      }
+    });
+  } catch (err) {
+    status.textContent = err.message || 'Não foi possível gerar o vídeo.';
+  }
+}
+
+function downloadOne() {
+  const clickedStep = step;
+  return runExport(async ({ exporter, frames, mb }) => {
+    const index = frames.activeSlideIndex(clickedStep);
+    status.textContent = 'Gerando…';
+    const data = await exporter.renderSlide(
+      (slide) => exporter.renderMov({ mb, loadImage, slide, baseUrl: location.href }),
+      manifestSlides[index],
+      index,
+    );
+    saveFile(new Blob([data], { type: 'video/quicktime' }), frames.movFileName(index, manifestSlides.length));
+  });
+}
+
+function downloadAll() {
+  return runExport(async ({ exporter, frames, mb, fflate }) => {
+    const zip = await exporter.exportFolder({
+      render: (slide) => exporter.renderMov({ mb, loadImage, slide, baseUrl: location.href }),
+      fflate,
+      slides: manifestSlides,
+      folder: frames.folderFromPath(location.pathname) ?? 'slides',
+      onProgress: (current, total) => { status.textContent = `Gerando ${current} / ${total}…`; },
+    });
+    saveFile(new Blob([zip.data], { type: 'application/zip' }), zip.name);
+  });
 }
 
 start();
