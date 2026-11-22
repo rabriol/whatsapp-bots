@@ -8,8 +8,7 @@ const MAX_BYTES = 25 * 1024 * 1024;
 
 // Slides for announcements.sdarmorangevale.com, stored in the folder the
 // announcements nginx container serves. Takes the directory so tests can use a temp one.
-function createSlidesRouter(slidesDir) {
-  const store = createStore(slidesDir);
+function createSlidesRouter(slidesDir, store = createStore(slidesDir)) {
   const router = express.Router();
   const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: MAX_BYTES } });
 
