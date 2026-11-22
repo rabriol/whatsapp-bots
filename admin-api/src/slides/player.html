@@ -172,9 +172,11 @@ async function start() {
 let exportKit = null;
 // Memoised so every click shares one kit, and with it one lock against overlapping jobs.
 function loadExportKit() {
-  exportKit ||= Promise.all([import('./export/exporter.js'), import('./export/frames.js'), import('./export/mediabunny.js'), import('./export/fflate.js')])
-    .then(([exporter, frames, mb, fflate]) => ({ exporter, frames, mb, fflate, exclusive: exporter.createExclusive() }))
-    .catch((err) => { exportKit = null; throw err; });
+  if (!exportKit) {
+    exportKit = Promise.all([import('./export/exporter.js'), import('./export/frames.js'), import('./export/mediabunny.js'), import('./export/fflate.js')])
+      .then(([exporter, frames, mb, fflate]) => ({ exporter, frames, mb, fflate, exclusive: exporter.createExclusive() }))
+      .catch((err) => { exportKit = null; throw err; });
+  }
   return exportKit;
 }
 
@@ -226,7 +228,11 @@ function downloadOne() {
   return runExport(async ({ exporter, frames, mb }) => {
     const index = frames.activeSlideIndex(clickedStep);
     status.textContent = 'Gerando…';
-    const data = await exporter.renderMov({ mb, loadImage, slide: manifestSlides[index], baseUrl: location.href });
+    const data = await exporter.renderSlide(
+      (slide) => exporter.renderMov({ mb, loadImage, slide, baseUrl: location.href }),
+      manifestSlides[index],
+      index,
+    );
     saveFile(new Blob([data], { type: 'video/quicktime' }), frames.movFileName(index, manifestSlides.length));
   });
 }

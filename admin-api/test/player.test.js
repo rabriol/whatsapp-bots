@@ -34,3 +34,11 @@ test('player loads export modules only from its own ./export/ folder', () => {
 test('player has a download-all ZIP button', () => {
   assert.ok(html.includes('id="dl-all"'));
 });
+
+test('single-slide download reports failures through renderSlide', () => {
+  assert.ok(html.includes('exporter.renderSlide('));
+});
+
+test('player script avoids ES2021 logical assignment so older browsers still play the show', () => {
+  assert.ok(!/\|\|=|\?\?=|&&=/.test(html));
+});
