@@ -64,6 +64,18 @@ services:
       - whatsapp-net
     restart: unless-stopped
 
+  # Static site announcements.sdarmorangevale.com (nginx). Only nginx.conf and the landing page
+  # (app/index.html) are in the image; the slide folders are the host directory below, written by
+  # admin-api and mounted read-only here, so redeploying never touches them.
+  announcements:
+    build: ./slides
+    container_name: announcements
+    volumes:
+      - ${SLIDES_HOST_DIR:-/opt/announcements/slides}:/usr/share/nginx/html:ro
+    networks:
+      - whatsapp-net
+    restart: unless-stopped
+
   cloudflared:
     image: cloudflare/cloudflared:latest
     container_name: cloudflared
